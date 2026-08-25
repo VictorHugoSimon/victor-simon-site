@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-base" content="__API_BASE__">
+  <meta name="environment" content="__ENVIRONMENT__">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>Painel de Marketing | Acesso restrito</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body class="panel-body">
+  <main id="loginView" class="login-shell">
+    <form class="card login-card" id="loginForm">
+      <div class="eyebrow">Acesso restrito</div><h2>Painel de Marketing</h2><p class="muted">Entre com as credenciais administrativas configuradas no ambiente.</p>
+      <div class="field"><label for="username">Usuário</label><input id="username" name="username" autocomplete="username" required></div>
+      <div class="field"><label for="password">Senha</label><input id="password" name="password" type="password" autocomplete="current-password" required></div>
+      <button class="btn btn-primary" type="submit">Entrar</button><div class="form-status" id="loginStatus" aria-live="polite"></div>
+    </form>
+  </main>
+  <main id="panelView" class="panel">
+    <header class="panel-header"><div class="container panel-title"><div><div class="eyebrow">Marketing / Comercial / Financeiro</div><h3>Painel Executivo</h3></div><button class="btn btn-small" id="logoutButton" type="button">Sair</button></div></header>
+    <section><div class="container"><div class="kpis" id="kpis"></div></div></section>
+    <section><div class="container"><div class="section-head"><div class="eyebrow">Leads prontos para execução</div><h2>Prioridade humana</h2><p class="muted">Somente contatos com score igual ou superior a 70.</p></div><div class="table-wrap"><table><thead><tr><th>Lead</th><th>Empresa</th><th>Score</th><th>Estágio</th><th>Entrada</th></tr></thead><tbody id="readyLeads"></tbody></table><div class="empty" id="readyEmpty">Carregando…</div></div></div></section>
+    <section><div class="container"><div class="section-head"><div class="eyebrow">CRM interno</div><h2>Pipeline</h2></div><div class="table-wrap"><table><thead><tr><th>Nome</th><th>Contato</th><th>Empresa</th><th>Score</th><th>Estágio</th></tr></thead><tbody id="leads"></tbody></table><div class="empty" id="leadsEmpty">Carregando…</div></div></div></section>
+  </main>
+  <script type="module" src="/assets/panel.js"></script>
+</body>
+</html>

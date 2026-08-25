@@ -1,0 +1,17 @@
+{
+  "name": "victor-simon-site",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Site, painel e API Cloudflare do ecossistema Victor Hugo Teixeira Simon.",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "verify": "node scripts/verify-project.mjs",
+    "build:staging": "node scripts/prepare-pages.mjs --environment staging --out dist",
+    "build:production": "node scripts/prepare-pages.mjs --environment production --out dist",
+    "ci": "npm run test && npm run verify && npm run build:staging && npm run build:production"
+  }
+}

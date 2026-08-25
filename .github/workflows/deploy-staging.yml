@@ -1,0 +1,98 @@
+name: Deploy STAGING
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Testar, migrar e publicar staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: staging
+      url: ${{ steps.pages.outputs.deployment-url }}
+    env:
+      DEPLOY_ENVIRONMENT: staging
+      WORKER_NAME: victor-simon-api-staging
+      D1_DATABASE_NAME: vhs-db-staging
+      PAGES_PROJECT_NAME: victor-simon-site-staging
+      PAGES_PRODUCTION_BRANCH: staging
+      CORS_ORIGIN: https://victor-simon-site-staging.pages.dev
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Dependências reprodutíveis
+        run: npm ci
+      - name: Testes e validações
+        run: npm run ci
+      - name: Validar secrets obrigatórios
+        env:
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          ROBOT_KEY: ${{ secrets.ROBOT_KEY }}
+          ADMIN_PASSWORD_HASH: ${{ secrets.ADMIN_PASSWORD_HASH }}
+        run: |
+          node -e "for (const k of ['CLOUDFLARE_ACCOUNT_ID','CLOUDFLARE_API_TOKEN','AUTH_SECRET','ROBOT_KEY','ADMIN_PASSWORD_HASH']) if (!process.env[k]) throw new Error('Secret ausente: '+k)"
+      - name: Garantir D1 e Pages
+        id: bootstrap
+        run: node scripts/bootstrap-cloudflare.mjs
+      - name: Gerar configuração do Worker
+        run: node scripts/generate-wrangler-config.mjs
+      - name: Aplicar migrações D1
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: 4.124.0
+          command: d1 migrations apply vhs-db-staging --remote --config wrangler.generated.jsonc
+      - name: Publicar API Worker
+        id: api
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: 4.124.0
+          command: deploy --config wrangler.generated.jsonc
+          secrets: |
+            AUTH_SECRET
+            ROBOT_KEY
+            ADMIN_PASSWORD_HASH
+        env:
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          ROBOT_KEY: ${{ secrets.ROBOT_KEY }}
+          ADMIN_PASSWORD_HASH: ${{ secrets.ADMIN_PASSWORD_HASH }}
+      - name: Preparar site sem indexação
+        env:
+          API_BASE: ${{ steps.api.outputs.deployment-url }}
+          REQUIRE_API_BASE: 1
+        run: npm run build:staging
+      - name: Publicar Cloudflare Pages
+        id: pages
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: 4.124.0
+          command: pages deploy dist --project-name=victor-simon-site-staging --branch=staging
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+      - name: Smoke test
+        env:
+          API_URL: ${{ steps.api.outputs.deployment-url }}
+          SITE_URL: ${{ steps.pages.outputs.deployment-url }}
+        run: node scripts/smoke-deployment.mjs

@@ -1,0 +1,37 @@
+name: Rollback Worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Ambiente que será revertido
+        required: true
+        type: choice
+        options: [staging, production]
+      version_id:
+        description: ID exato da versão anterior do Worker
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    name: Reverter Worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: ${{ inputs.environment }}
+    concurrency:
+      group: rollback-${{ inputs.environment }}
+      cancel-in-progress: false
+    env:
+      WORKER_NAME: ${{ inputs.environment == 'production' && 'victor-simon-api' || 'victor-simon-api-staging' }}
+    steps:
+      - name: Reverter para versão informada
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: 4.124.0
+          command: rollback ${{ inputs.version_id }} --name ${{ env.WORKER_NAME }} --message "Rollback manual pelo GitHub Actions"

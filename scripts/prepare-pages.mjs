@@ -1,0 +1,42 @@
+import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { basename, resolve, sep } from 'node:path';
+
+function arg(name, fallback) {
+  const index = process.argv.indexOf(name);
+  return index >= 0 ? process.argv[index + 1] : fallback;
+}
+
+const environment = arg('--environment', process.env.DEPLOY_ENVIRONMENT || 'staging');
+const outputName = arg('--out', 'dist');
+const apiBase = String(process.env.API_BASE || 'https://api.example.invalid').replace(/\/+$/, '');
+if (!['staging', 'production'].includes(environment)) throw new Error('Ambiente inválido.');
+if (process.env.REQUIRE_API_BASE === '1' && apiBase.includes('example.invalid')) {
+  throw new Error('API_BASE é obrigatória no deploy.');
+}
+
+const root = resolve(process.cwd());
+const source = resolve(root, 'public');
+const output = resolve(root, outputName);
+if (!output.startsWith(`${root}${sep}`) || !['dist', 'dist-staging', 'dist-production'].includes(basename(output))) {
+  throw new Error('Diretório de saída não permitido.');
+}
+
+await rm(output, { recursive: true, force: true });
+await mkdir(output, { recursive: true });
+await cp(source, output, { recursive: true });
+
+for (const file of ['index.html', 'blog.html', 'painel.html', 'assets/app.js', 'assets/blog.js', 'assets/panel.js']) {
+  const path = resolve(output, file);
+  let content = await readFile(path, 'utf8');
+  content = content.replaceAll('__API_BASE__', apiBase).replaceAll('__ENVIRONMENT__', environment);
+  await writeFile(path, content);
+}
+
+if (environment === 'staging') {
+  await writeFile(resolve(output, 'robots.txt'), 'User-agent: *\nDisallow: /\n');
+  const headersPath = resolve(output, '_headers');
+  const headers = await readFile(headersPath, 'utf8');
+  await writeFile(headersPath, `${headers.trim()}\n\n/*\n  X-Robots-Tag: noindex, nofollow, noarchive\n`);
+}
+
+console.log(`Site preparado em ${outputName} para ${environment}.`);
