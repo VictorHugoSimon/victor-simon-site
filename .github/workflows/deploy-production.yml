@@ -42,13 +42,30 @@ jobs:
         run: npm ci
       - name: Testes e validações
         run: npm run ci
-      - name: Validar secrets obrigatórios
+      - name: Preparar secrets internos
         env:
-          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-          ROBOT_KEY: ${{ secrets.ROBOT_KEY }}
-          ADMIN_PASSWORD_HASH: ${{ secrets.ADMIN_PASSWORD_HASH }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
         run: |
-          node -e "for (const k of ['CLOUDFLARE_ACCOUNT_ID','CLOUDFLARE_API_TOKEN','AUTH_SECRET','ROBOT_KEY','ADMIN_PASSWORD_HASH']) if (!process.env[k]) throw new Error('Secret ausente: '+k)"
+          node --input-type=module <<'NODE'
+          import crypto from 'node:crypto';
+          import fs from 'node:fs';
+          for (const key of ['CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN', 'ADMIN_PASSWORD']) {
+            if (!process.env[key]) throw new Error(`Secret ausente: ${key}`);
+          }
+          const derive = (label) => crypto
+            .createHmac('sha256', process.env.CLOUDFLARE_API_TOKEN)
+            .update(`victor-simon-site:${process.env.DEPLOY_ENVIRONMENT}:${label}`)
+            .digest('hex');
+          const values = {
+            AUTH_SECRET: derive('auth'),
+            ROBOT_KEY: derive('robot'),
+            ADMIN_PASSWORD_HASH: crypto.createHash('sha256').update(process.env.ADMIN_PASSWORD).digest('hex')
+          };
+          for (const [key, value] of Object.entries(values)) {
+            console.log(`::add-mask::${value}`);
+            fs.appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);
+          }
+          NODE
       - name: Garantir D1 e Pages
         id: bootstrap
         run: node scripts/bootstrap-cloudflare.mjs

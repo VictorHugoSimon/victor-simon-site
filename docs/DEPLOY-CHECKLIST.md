@@ -12,7 +12,7 @@ O pipeline cria os bancos e os projetos Pages. Não é necessário criá-los man
 ## 2. GitHub
 
 - [ ] Criar Environments `staging` e `production`.
-- [ ] Cadastrar os cinco secrets descritos no README.
+- [ ] Cadastrar os três secrets descritos no README.
 - [ ] Em `production`, habilitar aprovação obrigatória se desejar uma trava humana antes da publicação.
 - [ ] Proteger `main`: exigir pull request e CI verde.
 

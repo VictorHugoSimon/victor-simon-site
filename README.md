@@ -25,17 +25,11 @@ Crie no GitHub os Environments `staging` e `production` e adicione em ambos:
 |---|---|
 | `CLOUDFLARE_ACCOUNT_ID` | ID da conta Cloudflare |
 | `CLOUDFLARE_API_TOKEN` | Token com Workers Scripts Edit, D1 Edit e Pages Edit |
-| `AUTH_SECRET` | String aleatória com pelo menos 32 caracteres |
-| `ROBOT_KEY` | Chave aleatória para automações internas |
-| `ADMIN_PASSWORD_HASH` | SHA-256 da senha administrativa |
+| `ADMIN_PASSWORD` | Senha administrativa forte, informada somente no GitHub |
 
-Gere os três últimos valores localmente:
-
-```bash
-node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
-node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
-node scripts/hash-password.mjs "SUA-SENHA-COM-12-OU-MAIS-CARACTERES"
-```
+O pipeline deriva `AUTH_SECRET` e `ROBOT_KEY` com HMAC-SHA-256 e transforma
+`ADMIN_PASSWORD` em SHA-256 antes de enviar os valores ao Worker. Os valores
+derivados são mascarados nos logs e nunca entram no repositório.
 
 Não coloque valores secretos em arquivos, commits, issues ou logs.
 
