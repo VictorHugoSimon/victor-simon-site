@@ -63,6 +63,28 @@ test('Growth API possui CRUD editorial, aprovação e geração assistida', asyn
   assert.ok(config.includes("ai: { binding: 'AI' }"), 'Binding Workers AI ausente.');
 });
 
+test('Automação multicanal gera derivados e mídia privada em R2', async () => {
+  const [automation, worker, config, bootstrap, ui] = await Promise.all([
+    text('backend/growth-automation.mjs'),
+    text('backend/worker.mjs'),
+    text('scripts/generate-wrangler-config.mjs'),
+    text('scripts/bootstrap-cloudflare.mjs'),
+    text('public/assets/growth-automation-ui.js')
+  ]);
+  for (const route of ['/api/growth/media', '/api/growth/media/generate', '/repurpose']) {
+    assert.ok(automation.includes(route), `Automação sem rota ${route}`);
+  }
+  assert.ok(automation.includes("@cf/black-forest-labs/flux-1-schnell"), 'Art Director sem FLUX.1 schnell.');
+  assert.ok(automation.includes("'social_repurposer'"), 'Social Repurposer não registra execução.');
+  assert.ok(automation.includes("status = 'draft'") || automation.includes("'draft'"), 'Derivados não preservam draft.');
+  assert.ok(automation.includes("'review'"), 'Mídia gerada não entra em revisão.');
+  assert.ok(worker.includes('handleGrowthAutomationRoute'), 'Worker não integra automação Growth.');
+  assert.ok(config.includes("binding: 'MEDIA'"), 'Wrangler não prepara binding R2 MEDIA.');
+  assert.ok(bootstrap.includes('/r2/buckets'), 'Bootstrap não tenta provisionar R2.');
+  assert.ok(ui.includes('Gerar LinkedIn + Instagram + Newsletter'), 'Painel não expõe automação multicanal.');
+  assert.ok(ui.includes('Biblioteca de Mídia'), 'Painel não expõe biblioteca de mídia.');
+});
+
 test('CSP permite somente a origem externa necessária para a foto temporária', async () => {
   const headers = await text('public/_headers');
   assert.match(headers, /img-src[^\n]+https:\/\/avatars\.githubusercontent\.com/);
