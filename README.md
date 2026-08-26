@@ -27,10 +27,10 @@ O domínio `www.victorhugoteixeirasimon.com.br` fica reservado para associação
 ## O que acontece automaticamente
 
 - qualquer pull request para `staging` ou `main` executa testes, verificação estrutural e build;
-- push em `staging` publica o ambiente de homologação quando as credenciais próprias de `staging` estiverem configuradas;
-- push em `main` verifica primeiro se existem credenciais próprias do Environment `production`;
-- sem credenciais próprias, o deploy Cloudflare é ignorado com segurança, sem reaproveitar credenciais de outro projeto;
-- com credenciais próprias, o pipeline cria/confirma recursos, aplica migrações, publica Worker e Pages e executa smoke test;
+- push em `staging` publica o ambiente de homologação quando o `CLOUDFLARE_API_TOKEN` próprio de `staging` estiver configurado;
+- push em `main` verifica primeiro se o `CLOUDFLARE_API_TOKEN` próprio do Environment `production` existe;
+- sem esse token próprio, o deploy Cloudflare é ignorado com segurança, sem reaproveitar credenciais de outro projeto;
+- com o token próprio, o pipeline cria/confirma recursos, aplica migrações, publica Worker e Pages e executa smoke test;
 - o endereço real do Worker é injetado no site durante o pipeline;
 - staging recebe `robots.txt` e `X-Robots-Tag` de bloqueio de indexação;
 - migrações são versionadas e aplicadas antes do código da API.
@@ -45,13 +45,13 @@ feature/* → pull request → staging/homologação → main → produção
 
 Crie no GitHub os Environments `staging` e `production` e adicione, diretamente no GitHub e nunca no chat:
 
-| Secret | Conteúdo |
-|---|---|
-| `CLOUDFLARE_ACCOUNT_ID` | ID da conta Cloudflare; opcional quando o token permite descoberta segura da conta |
-| `CLOUDFLARE_API_TOKEN` | Token próprio deste projeto com Workers Scripts Edit, D1 Edit e Pages Edit |
-| `ADMIN_PASSWORD` | Senha administrativa forte do Growth OS |
+| Secret | Obrigatório | Conteúdo |
+|---|---|---|
+| `CLOUDFLARE_API_TOKEN` | Sim | Token próprio deste projeto com permissões para Workers Scripts, D1, Pages e, quando usado, R2/Workers AI |
+| `ADMIN_PASSWORD` | Não para infraestrutura | Senha administrativa forte do Growth OS. Quando ausente, o deploy continua, mas o login administrativo fica efetivamente bloqueado até novo deploy com senha definida |
+| `CLOUDFLARE_ACCOUNT_ID` | Não | ID da conta Cloudflare; o bootstrap tenta descoberta segura quando o token permite listar a conta |
 
-O pipeline deriva `AUTH_SECRET` e `ROBOT_KEY` com HMAC-SHA-256 e transforma `ADMIN_PASSWORD` em SHA-256 antes de enviar os valores ao Worker. Os valores derivados são mascarados nos logs e nunca entram no repositório.
+O pipeline deriva `AUTH_SECRET` e `ROBOT_KEY` com HMAC-SHA-256. Quando `ADMIN_PASSWORD` está configurada, ela é transformada em SHA-256 antes de ser enviada ao Worker. Quando está ausente, o pipeline gera uma senha aleatória descartável apenas em runtime, grava somente o hash e não revela o valor, mantendo o painel bloqueado. Os valores derivados são mascarados nos logs e nunca entram no repositório.
 
 Não coloque valores secretos em arquivos, commits, issues ou logs.
 
@@ -72,8 +72,9 @@ Para executar a API local com D1, copie `wrangler.example.jsonc` para um arquivo
 2. Execute CI e Visual QA contra STAGING.
 3. Homologue Home desktop/mobile, Blog e Growth OS.
 4. Promova o código para `main`.
-5. Quando o Environment `production` tiver credenciais próprias, o workflow **Deploy PRODUCTION** publica em `victor-hugo-teixeira-simon.pages.dev`.
+5. Quando o Environment `production` tiver `CLOUDFLARE_API_TOKEN` próprio, o workflow **Deploy PRODUCTION** publica em `victor-hugo-teixeira-simon.pages.dev`.
 6. Execute smoke test e QA da URL publicada.
+7. Cadastre `ADMIN_PASSWORD` antes ou depois do deploy quando quiser liberar o login administrativo do Growth OS.
 
 O projeto Pages e o D1 são criados automaticamente se ainda não existirem.
 
@@ -82,6 +83,7 @@ O projeto Pages e o D1 são criados automaticamente se ainda não existirem.
 - o painel não é linkado no site e possui `noindex`;
 - autenticação ocorre no Worker com token HMAC de oito horas;
 - senha não é armazenada no front-end;
+- sem `ADMIN_PASSWORD`, a infraestrutura pode ser publicada mantendo o painel administrativo bloqueado;
 - CORS é específico por ambiente;
 - endpoints públicos possuem rate limit, limite de payload e validação;
 - queries D1 usam prepared statements;
