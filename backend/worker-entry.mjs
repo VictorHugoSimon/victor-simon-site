@@ -1,4 +1,5 @@
 import coreWorker from './worker.mjs';
+import { sha256 } from './lib.mjs';
 import { attachLeadAttribution, handleGrowthLoopRoute, runScheduledGrowthLoop } from './growth-loop.mjs';
 
 function allowedOrigin(request, env) {
@@ -22,6 +23,27 @@ function withGrowthHeaders(response, request, env) {
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
+async function rateLimitGrowthTouch(request, env, limit = 90, seconds = 300) {
+  try {
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const window = Math.floor(Date.now() / 1000 / seconds);
+    const bucket = await sha256(`growth-touch:${ip}:${window}`);
+    const expiresAt = (window + 1) * seconds;
+    await env.DB.prepare(`
+      INSERT INTO rate_limits (bucket, hits, expires_at) VALUES (?, 1, ?)
+      ON CONFLICT(bucket) DO UPDATE SET hits = hits + 1
+    `).bind(bucket, expiresAt).run();
+    const result = await env.DB.prepare('SELECT hits FROM rate_limits WHERE bucket = ?').bind(bucket).first();
+    return Number(result?.hits || 0) <= limit;
+  } catch {
+    return true;
+  }
+}
+
+function jsonResponse(payload, status = 200) {
+  return new Response(JSON.stringify(payload), { status, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
+}
+
 async function maybeAttachLead(response, env, leadPayload) {
   if (!leadPayload?.sessionId || !response?.ok) return response;
   try {
@@ -41,7 +63,10 @@ export default {
       if (path.startsWith('/api/growth-loop')) {
         if (request.method === 'OPTIONS') return withGrowthHeaders(new Response(null, { status: 204 }), request, env);
         if (request.headers.get('Origin') && !allowedOrigin(request, env)) {
-          return withGrowthHeaders(new Response(JSON.stringify({ error: 'origin_not_allowed' }), { status: 403, headers: { 'Content-Type': 'application/json' } }), request, env);
+          return withGrowthHeaders(jsonResponse({ error: 'origin_not_allowed' }, 403), request, env);
+        }
+        if (request.method === 'POST' && path === '/api/growth-loop/touch' && !(await rateLimitGrowthTouch(request, env))) {
+          return withGrowthHeaders(jsonResponse({ error: 'rate_limited' }, 429), request, env);
         }
         const growthLoopResponse = await handleGrowthLoopRoute(request, env);
         if (growthLoopResponse) return withGrowthHeaders(growthLoopResponse, request, env);
