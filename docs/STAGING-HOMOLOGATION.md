@@ -7,6 +7,8 @@ GitHub Actions:
 - `CLOUDFLARE_API_TOKEN`
 - `ADMIN_PASSWORD`
 
+O API Token deve permitir operar os recursos usados pelo projeto: Workers Scripts, Pages e D1. Para descoberta automática de conta, precisa conseguir listar as contas acessíveis; para mídia, incluir Workers R2 Storage Write.
+
 Opcional:
 - `CLOUDFLARE_ACCOUNT_ID` ou `CLOUDFLARE_ACCOUNT_NAME` se o token acessar múltiplas contas que não possam ser diferenciadas automaticamente.
 - `LINKEDIN_CLIENT_ID` + `LINKEDIN_CLIENT_SECRET` para ativar LinkedIn.
