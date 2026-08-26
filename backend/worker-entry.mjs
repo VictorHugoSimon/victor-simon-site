@@ -1,6 +1,7 @@
 import coreWorker from './worker.mjs';
 import { sha256 } from './lib.mjs';
 import { attachLeadAttribution, handleGrowthLoopRoute, runScheduledGrowthLoop } from './growth-loop.mjs';
+import { handlePublicationQueueRoute, processPublicationJobs } from './publication-queue.mjs';
 
 function allowedOrigin(request, env) {
   const origin = request.headers.get('Origin') || '';
@@ -60,7 +61,7 @@ export default {
     try {
       const url = new URL(request.url);
       const path = url.pathname.replace(/\/+$/, '') || '/';
-      if (path.startsWith('/api/growth-loop')) {
+      if (path.startsWith('/api/growth-loop') || path.startsWith('/api/publication-jobs')) {
         if (request.method === 'OPTIONS') return withGrowthHeaders(new Response(null, { status: 204 }), request, env);
         if (request.headers.get('Origin') && !allowedOrigin(request, env)) {
           return withGrowthHeaders(jsonResponse({ error: 'origin_not_allowed' }, 403), request, env);
@@ -68,6 +69,8 @@ export default {
         if (request.method === 'POST' && path === '/api/growth-loop/touch' && !(await rateLimitGrowthTouch(request, env))) {
           return withGrowthHeaders(jsonResponse({ error: 'rate_limited' }, 429), request, env);
         }
+        const publicationResponse = await handlePublicationQueueRoute(request, env);
+        if (publicationResponse) return withGrowthHeaders(publicationResponse, request, env);
         const growthLoopResponse = await handleGrowthLoopRoute(request, env);
         if (growthLoopResponse) return withGrowthHeaders(growthLoopResponse, request, env);
       }
@@ -88,9 +91,10 @@ export default {
   async scheduled(controller, env, ctx) {
     ctx.waitUntil((async () => {
       try {
+        await processPublicationJobs(env, 10);
         await runScheduledGrowthLoop(env);
       } catch (error) {
-        console.error('growth_loop_cron_error', { cron: controller?.cron, message: error?.message });
+        console.error('scheduled_growth_error', { cron: controller?.cron, message: error?.message });
       }
     })());
   }
