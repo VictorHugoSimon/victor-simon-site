@@ -13,6 +13,7 @@ import {
 import { buildDossier, qualifyLead } from './qualify.mjs';
 import { firstReply } from './chatbot.mjs';
 import { handleGrowthRoute } from './growth.mjs';
+import { handleGrowthAutomationRoute } from './growth-automation.mjs';
 
 const publicPostRoutes = new Set(['/api/leads', '/api/events']);
 
@@ -307,6 +308,8 @@ async function route(request, env) {
   const path = url.pathname.replace(/\/+$/, '') || '/';
 
   if (request.method === 'OPTIONS') return new Response(null, { status: 204 });
+  const automationResponse = await handleGrowthAutomationRoute(request, env);
+  if (automationResponse) return automationResponse;
   const growthResponse = await handleGrowthRoute(request, env);
   if (growthResponse) return growthResponse;
   if (request.method === 'GET' && path === '/api/health') return health(env);
