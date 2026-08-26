@@ -77,9 +77,10 @@ for (const file of ['index.html', 'blog.html', 'painel.html', 'assets/app.js', '
     .replaceAll(legacySiteBase, siteBase);
   content = injectPublicExperience(content, file);
   if (file === 'painel.html') {
-    for (const script of ['growth-automation-ui.js', 'social-ui.js', 'growth-loop-ui.js']) {
-      if (!content.includes(`/assets/${script}`)) {
-        content = content.replace('</body>', `  <script type="module" src="/assets/${script}"></script>\n</body>`);
+    const panelScripts = ['/assets/growth-automation-ui.js', '/assets/social-ui.js', '/assets/growth-loop-ui.js'];
+    for (const scriptPath of panelScripts) {
+      if (!content.includes(scriptPath)) {
+        content = content.replace('</body>', `  <script type="module" src="${scriptPath}"></script>\n</body>`);
       }
     }
   }
