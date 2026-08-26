@@ -26,5 +26,8 @@ Para ativar as integrações depois do deploy-base:
 - LinkedIn: `LINKEDIN_CLIENT_ID` + `LINKEDIN_CLIENT_SECRET`;
 - Instagram: `INSTAGRAM_CLIENT_ID` + `INSTAGRAM_CLIENT_SECRET`.
 
+## Validação
+Há histórico de CI verde na fundação anterior do Growth OS. O head mais recente, que inclui OAuth social e hardening do deploy, deve passar novamente `CI` e `Growth OS CI` antes de promoção. As mutações feitas via conector nesta sessão não estão disparando GitHub Actions automaticamente, portanto a homologação real continuará usando o workflow manual de STAGING quando os secrets base estiverem disponíveis.
+
 ## Produção
 `main` não deve receber esta versão antes de STAGING executar migrations, Worker/AI/R2, Pages e smoke tests com sucesso.
