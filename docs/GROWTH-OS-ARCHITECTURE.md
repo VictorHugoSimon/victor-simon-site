@@ -15,15 +15,15 @@ Uma pauta de alta qualidade deve gerar múltiplos ativos: artigo, post LinkedIn,
 - WhatsApp / contato
 
 ## Agentes
-1. Radar — tendências, temas e oportunidades. Planejado.
-2. Estrategista — priorização por pilar, autoridade e negócio. Planejado.
-3. Pesquisador — fontes, fatos, dados e contexto. Planejado.
+1. Radar — **implementado no Growth Loop V1**; cria pautas a partir de sinais fornecidos ou lacunas editoriais.
+2. Estrategista — **implementado no Growth Loop V1**; reavalia pautas por histórico do pilar, evidência e recência.
+3. Pesquisador — **implementado no Growth Loop V1**; lê fonte HTTPS, resume fatos e grava evidência para revisão.
 4. Editorial Writer — **implementado** com Workers AI; cria rascunhos de conteúdo.
 5. Social Repurposer — **implementado**; transforma um conteúdo-base em drafts de LinkedIn, Instagram e newsletter.
 6. Art Director — **implementado**; gera imagem conceitual com FLUX e grava em R2 privado como `review`.
 7. Revisor — fluxo humano **implementado** via aprovação/rejeição de conteúdo e mídia.
 8. Publicador — **implementado na fundação** para LinkedIn e Instagram; só publica conteúdo aprovado e depende de OAuth oficial conectado.
-9. Analytics / Growth Coach — planejados para o ciclo de métricas e otimização.
+9. Analytics / Growth Coach — **implementados no Growth Loop V1** com Content Score, performance de 30 dias e recomendações.
 
 ## Pilares editoriais
 - PMO & Governança
@@ -49,7 +49,7 @@ Score de 0 a 100 calculado por combinação ponderada de alcance, engajamento, a
 - D1: dados estruturados, auditoria dos agentes, estados OAuth e credenciais sociais criptografadas
 - R2 `MEDIA`: imagens e demais ativos privados; binding só é ativado após provisionamento confirmado
 - Futuro: Queues para publicação assíncrona/retry
-- Futuro: Cron Triggers para Radar, Analytics, refresh e sincronizações
+- Cron Trigger diário implementado para fila de publicação + Radar + Estratégia + Analytics + Growth Coach
 
 ## R2 e resiliência
 Os deploys definem buckets separados:
@@ -173,11 +173,16 @@ A fundação anterior possui histórico de `CI` e `Growth OS CI` verdes. O head 
 6. disponibilizar os quatro secrets sociais
 7. conectar contas reais e fazer publicações de teste aprovadas
 
-### Growth Loop
-- status/retry assíncrono de publicação
-- métricas por canal
-- atribuição UTM
-- leads por conteúdo/campanha
-- Content Score
-- recomendações automáticas
-- dashboards de tendência e performance
+### Growth Loop V1 — implementado
+- fila D1 de publicação agendada com retry controlado e gate de aprovação
+- ingestão de métricas por canal
+- atribuição UTM + IDs internos por sessão
+- first/last touch associado ao lead
+- Content Score 0–100
+- Radar, Estrategista, Pesquisador, Analytics e Growth Coach
+- painel de performance, atribuição e ciclos
+
+### Evoluções dependentes de provedores
+- sincronização automática de métricas sociais conforme permissões concedidas
+- calibração dos pesos do Content Score com histórico real
+- Cloudflare Queues opcional para volumes maiores

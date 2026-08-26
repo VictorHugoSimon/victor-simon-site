@@ -2,6 +2,17 @@ const API_BASE = document.querySelector('meta[name="api-base"]')?.content?.repla
 const params = new URLSearchParams(location.search);
 let language = params.get('lang') === 'en' ? 'en' : 'pt';
 
+const attribution = {
+  source: params.get('utm_source') || '',
+  medium: params.get('utm_medium') || '',
+  campaign: params.get('utm_campaign') || '',
+  term: params.get('utm_term') || '',
+  content: params.get('utm_content') || '',
+  contentItemId: params.get('vh_content') || '',
+  publicationId: params.get('vh_publication') || '',
+  campaignId: params.get('vh_campaign') || ''
+};
+
 function applyLanguage() {
   document.documentElement.lang = language === 'en' ? 'en' : 'pt-BR';
   document.querySelectorAll('[data-pt][data-en]').forEach((element) => {
@@ -45,13 +56,27 @@ function sessionId() {
   return created;
 }
 
+function attributionMetadata(extra = {}) {
+  return {
+    ...extra,
+    utm_source: attribution.source,
+    utm_medium: attribution.medium,
+    utm_campaign: attribution.campaign,
+    utm_term: attribution.term,
+    utm_content: attribution.content,
+    contentItemId: attribution.contentItemId,
+    publicationId: attribution.publicationId,
+    campaignId: attribution.campaignId
+  };
+}
+
 async function track(event, metadata = {}) {
   if (!API_BASE || API_BASE.includes('example.invalid')) return;
   try {
     await fetch(`${API_BASE}/api/events`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event, metadata, sessionId: sessionId(), page: location.pathname, language }),
+      body: JSON.stringify({ event, metadata: attributionMetadata(metadata), sessionId: sessionId(), page: location.pathname, language }),
       keepalive: true
     });
   } catch {
@@ -59,10 +84,39 @@ async function track(event, metadata = {}) {
   }
 }
 
+async function trackAttributionTouch(eventName = 'page_view') {
+  if (!API_BASE || API_BASE.includes('example.invalid')) return;
+  try {
+    await fetch(`${API_BASE}/api/growth-loop/touch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: sessionId(),
+        source: attribution.source || (document.referrer ? 'referral' : 'direct'),
+        medium: attribution.medium,
+        campaign: attribution.campaign,
+        term: attribution.term,
+        content: attribution.content,
+        contentItemId: attribution.contentItemId,
+        publicationId: attribution.publicationId,
+        campaignId: attribution.campaignId,
+        landingPage: `${location.pathname}${location.search}`.slice(0, 400),
+        referrer: document.referrer,
+        eventName,
+        metadata: { language }
+      }),
+      keepalive: true
+    });
+  } catch {
+    // Atribuição é best-effort e nunca bloqueia a experiência pública.
+  }
+}
+
 document.querySelectorAll('[data-event]').forEach((element) => {
   element.addEventListener('click', () => track(element.dataset.event));
 });
 track('page_view');
+trackAttributionTouch('page_view');
 
 const leadForm = document.querySelector('#leadForm');
 leadForm?.addEventListener('submit', async (event) => {
@@ -71,7 +125,8 @@ leadForm?.addEventListener('submit', async (event) => {
   const button = leadForm.querySelector('button[type="submit"]');
   const payload = Object.fromEntries(new FormData(leadForm).entries());
   payload.language = language;
-  payload.source = 'website';
+  payload.source = attribution.source || 'website';
+  payload.sessionId = sessionId();
   status.className = 'form-status';
   status.textContent = language === 'en' ? 'Sending securely…' : 'Enviando com segurança…';
   button.disabled = true;
@@ -82,13 +137,15 @@ leadForm?.addEventListener('submit', async (event) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(`HTTP_${response.status}`);
     status.className = 'form-status success';
     status.textContent = language === 'en'
       ? 'Context received. Our triage will direct the next step.'
       : 'Contexto recebido. Nossa triagem direcionará o próximo passo.';
     leadForm.reset();
-    track('lead_submitted');
+    track('lead_submitted', { leadId: data.id || '' });
+    trackAttributionTouch('lead_submitted');
   } catch {
     status.className = 'form-status error';
     status.textContent = language === 'en'
