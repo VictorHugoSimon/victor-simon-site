@@ -112,7 +112,7 @@ test('OAuth social usa estado descartável, criptografia e escopos atuais', asyn
   assert.ok(build.includes('/assets/social-ui.js'), 'Build não injeta interface social.');
 });
 
-test('Deploy descobre conta Cloudflare, preserva secrets e permite STAGING técnico sem senha', async () => {
+test('Deploy descobre conta Cloudflare, preserva secrets e permite deploy técnico sem senha administrativa', async () => {
   const [bootstrap, staging, production] = await Promise.all([
     text('scripts/bootstrap-cloudflare.mjs'),
     text('.github/workflows/deploy-staging.yml'),
@@ -122,19 +122,17 @@ test('Deploy descobre conta Cloudflare, preserva secrets e permite STAGING técn
   assert.ok(bootstrap.includes('CLOUDFLARE_ACCOUNT_NAME'), 'Bootstrap não suporta desambiguação por nome de conta.');
   assert.ok(bootstrap.includes('CLOUDFLARE_ACCOUNT_ID: accountId'), 'Bootstrap não exporta Account ID descoberto.');
 
-  assert.ok(staging.includes("if (!process.env.CLOUDFLARE_API_TOKEN) throw new Error('Secret ausente: CLOUDFLARE_API_TOKEN')"), 'STAGING não exige o token Cloudflare.');
-  assert.ok(staging.includes('crypto.randomBytes(48).toString(\'base64url\')'), 'STAGING não bloqueia login com senha aleatória quando ADMIN_PASSWORD está ausente.');
-  assert.ok(staging.includes('ADMIN_PASSWORD ausente. STAGING seguirá com login administrativo efetivamente bloqueado'), 'STAGING não registra o modo técnico sem senha.');
-  assert.ok(!staging.includes("['CLOUDFLARE_API_TOKEN', 'ADMIN_PASSWORD']"), 'STAGING voltou a exigir senha administrativa para infraestrutura.');
-
-  assert.ok(production.includes("['CLOUDFLARE_API_TOKEN', 'ADMIN_PASSWORD']"), 'Produção deixou de exigir senha administrativa explicitamente.');
-
-  for (const workflow of [staging, production]) {
+  for (const [label, workflow] of [['STAGING', staging], ['PRODUCTION', production]]) {
+    assert.ok(workflow.includes("if (!process.env.CLOUDFLARE_API_TOKEN) throw new Error('Secret ausente: CLOUDFLARE_API_TOKEN')"), `${label} não exige o token Cloudflare.`);
+    assert.ok(workflow.includes("crypto.randomBytes(48).toString('base64url')"), `${label} não bloqueia login com senha aleatória quando ADMIN_PASSWORD está ausente.`);
+    assert.ok(!workflow.includes("['CLOUDFLARE_API_TOKEN', 'ADMIN_PASSWORD']"), `${label} voltou a exigir senha administrativa para infraestrutura.`);
     assert.ok(workflow.includes('secrets: |\n            AUTH_SECRET\n            ROBOT_KEY\n            ADMIN_PASSWORD_HASH'), 'Worker não recebe os secrets internos derivados.');
     assert.ok(!workflow.includes('AUTH_SECRET: ${{ secrets.AUTH_SECRET }}'), 'Deploy sobrescreve AUTH_SECRET derivado com secret externo.');
     assert.ok(!workflow.includes('ROBOT_KEY: ${{ secrets.ROBOT_KEY }}'), 'Deploy sobrescreve ROBOT_KEY derivado com secret externo.');
     assert.ok(!workflow.includes('ADMIN_PASSWORD_HASH: ${{ secrets.ADMIN_PASSWORD_HASH }}'), 'Deploy sobrescreve hash derivado com secret externo.');
   }
+  assert.ok(staging.includes('ADMIN_PASSWORD ausente. STAGING seguirá com login administrativo efetivamente bloqueado'), 'STAGING não registra o modo técnico sem senha.');
+  assert.ok(production.includes('ADMIN_PASSWORD ausente. PRODUCTION seguirá com login administrativo efetivamente bloqueado'), 'PRODUCTION não registra o modo técnico sem senha.');
 });
 
 test('CSP permite somente a origem externa necessária para a foto temporária', async () => {
