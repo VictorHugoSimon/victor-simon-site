@@ -65,7 +65,7 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await cp(source, output, { recursive: true });
 
-for (const file of ['index.html', 'blog.html', 'painel.html', 'assets/app.js', 'assets/blog.js', 'assets/panel.js', 'assets/growth-automation-ui.js', 'assets/social-ui.js']) {
+for (const file of ['index.html', 'blog.html', 'painel.html', 'assets/app.js', 'assets/blog.js', 'assets/panel.js', 'assets/growth-automation-ui.js', 'assets/social-ui.js', 'assets/growth-loop-ui.js']) {
   const path = resolve(output, file);
   let content = await readFile(path, 'utf8');
   content = content
@@ -74,11 +74,10 @@ for (const file of ['index.html', 'blog.html', 'painel.html', 'assets/app.js', '
     .replaceAll(legacySiteBase, siteBase);
   content = injectPublicExperience(content, file);
   if (file === 'painel.html') {
-    if (!content.includes('/assets/growth-automation-ui.js')) {
-      content = content.replace('</body>', '  <script type="module" src="/assets/growth-automation-ui.js"></script>\n</body>');
-    }
-    if (!content.includes('/assets/social-ui.js')) {
-      content = content.replace('</body>', '  <script type="module" src="/assets/social-ui.js"></script>\n</body>');
+    for (const script of ['growth-automation-ui.js', 'social-ui.js', 'growth-loop-ui.js']) {
+      if (!content.includes(`/assets/${script}`)) {
+        content = content.replace('</body>', `  <script type="module" src="/assets/${script}"></script>\n</body>`);
+      }
     }
   }
   await writeFile(path, content);
