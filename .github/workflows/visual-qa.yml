@@ -1,4 +1,4 @@
-name: Visual QA
+name: Visual QA STAGING
 
 on:
   pull_request:
@@ -10,8 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  staging:
-    name: STAGING visual QA
+  visual-qa:
     if: ${{ github.event_name != 'pull_request' || github.head_ref == 'feature/growth-os-v2' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -39,82 +38,20 @@ jobs:
           grep -Fq 'Growth OS' /tmp/painel.html
       - name: Instalar Chromium
         run: npx --yes playwright@1.55.0 install --with-deps chromium
-      - name: Capturar STAGING
+      - name: Capturar evidências visuais
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p qa/staging
+          mkdir -p qa/screenshots
           BASE='https://victor-simon-site-staging.pages.dev'
-          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='1440,1000' "$BASE/" qa/staging/home-desktop.png
-          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='390,844' "$BASE/" qa/staging/home-mobile.png
-          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='1440,1000' "$BASE/blog" qa/staging/blog-desktop.png
-          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='1440,1000' "$BASE/painel.html" qa/staging/painel-login.png
-      - name: Publicar STAGING
+          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='1440,1000' "$BASE/" qa/screenshots/home-desktop.png
+          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='390,844' "$BASE/" qa/screenshots/home-mobile.png
+          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='1440,1000' "$BASE/blog" qa/screenshots/blog-desktop.png
+          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='1440,1000' "$BASE/painel.html" qa/screenshots/painel-login.png
+      - name: Publicar evidências
         uses: actions/upload-artifact@v4
         with:
           name: visual-qa-staging
-          path: qa/staging/*.png
-          if-no-files-found: error
-          retention-days: 7
-
-  production:
-    name: PRODUÇÃO temporária diagnóstico visual
-    if: ${{ github.event_name != 'pull_request' || github.head_ref == 'feature/growth-os-v2' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-      - name: Baixar páginas de produção
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p qa/production/raw
-          BASE='https://victor-hugo-teixeira-simon.pages.dev'
-          curl -fsSL --retry 5 --retry-delay 2 "$BASE/" -o qa/production/raw/home.html
-          curl -fsSL --retry 5 --retry-delay 2 "$BASE/blog" -o qa/production/raw/blog.html || true
-          curl -fsSL --retry 5 --retry-delay 2 "$BASE/painel.html" -o qa/production/raw/painel.html || true
-      - name: Gerar diagnóstico de versão
-        shell: bash
-        run: |
-          set -euo pipefail
-          HOME='qa/production/raw/home.html'
-          BLOG='qa/production/raw/blog.html'
-          PANEL='qa/production/raw/painel.html'
-          report='qa/production/version-report.txt'
-          check() { if grep -Fq "$2" "$1" 2>/dev/null; then echo "$3=SIM"; else echo "$3=NAO"; fi; }
-          {
-            check "$HOME" 'Clareza para decidir. Método para executar. Resultado para crescer.' 'hero_v2'
-            check "$HOME" 'id="consultoria"' 'consultoria_v2'
-            check "$HOME" 'id="servicos"' 'servicos_v2'
-            check "$HOME" 'id="metodo"' 'metodo_v2'
-            check "$HOME" 'id="projetos"' 'projetos_v2'
-            check "$HOME" 'id="ifarm"' 'ifarm_v2'
-            check "$HOME" '/assets/profile-v2.css' 'css_v2'
-            check "$BLOG" 'articleView' 'blog_v2'
-            check "$BLOG" 'Gestão que funciona no mundo real.' 'blog_heading_v2'
-            check "$PANEL" 'Growth OS' 'painel_growth_os'
-          } | tee "$report"
-      - name: Instalar Chromium
-        run: npx --yes playwright@1.55.0 install --with-deps chromium
-      - name: Capturar produção atual
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p qa/production/screenshots
-          BASE='https://victor-hugo-teixeira-simon.pages.dev'
-          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='1440,1000' "$BASE/" qa/production/screenshots/home-desktop.png
-          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='390,844' "$BASE/" qa/production/screenshots/home-mobile.png
-          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='1440,1000' "$BASE/blog" qa/production/screenshots/blog-desktop.png || true
-          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='1440,1000' "$BASE/painel.html" qa/production/screenshots/painel-login.png || true
-      - name: Publicar diagnóstico de produção
-        uses: actions/upload-artifact@v4
-        with:
-          name: visual-qa-production
-          path: qa/production/**
+          path: qa/screenshots/*.png
           if-no-files-found: error
           retention-days: 7
