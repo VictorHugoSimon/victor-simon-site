@@ -140,6 +140,9 @@ Os últimos deploys reais de STAGING e produção, executados antes dessa melhor
 
 O conector GitHub disponível nesta sessão não expõe API de escrita de Secrets; portanto `CLOUDFLARE_API_TOKEN` e `ADMIN_PASSWORD` não podem ser criados por commit ou chamada do conector sem quebrar o modelo de segurança.
 
+## Estado de validação
+A fundação anterior possui histórico de `CI` e `Growth OS CI` verdes. O head atual acrescentou OAuth social, publicação aprovada, migration `0004`, descoberta automática da conta Cloudflare e hardening do deploy. Ele precisa de nova execução dos dois CIs antes de promoção. As mutações realizadas pelo conector não estão disparando Actions automaticamente nesta sessão; por isso o gate de homologação real permanece o `Deploy STAGING` manual após os dois secrets base estarem disponíveis.
+
 ## Roadmap atualizado
 ### Fundação — implementada na branch
 - Home V2 fiel ao protótipo
