@@ -95,6 +95,37 @@ jobs:
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
           ROBOT_KEY: ${{ secrets.ROBOT_KEY }}
           ADMIN_PASSWORD_HASH: ${{ secrets.ADMIN_PASSWORD_HASH }}
+      - name: Configurar OAuth social opcional
+        env:
+          LINKEDIN_CLIENT_ID: ${{ secrets.LINKEDIN_CLIENT_ID }}
+          LINKEDIN_CLIENT_SECRET: ${{ secrets.LINKEDIN_CLIENT_SECRET }}
+          INSTAGRAM_CLIENT_ID: ${{ secrets.INSTAGRAM_CLIENT_ID }}
+          INSTAGRAM_CLIENT_SECRET: ${{ secrets.INSTAGRAM_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          put_secret() {
+            local name="$1"
+            local value="$2"
+            printf '%s' "$value" | npx wrangler@4.124.0 secret put "$name" --config wrangler.generated.jsonc >/dev/null
+          }
+          if [ -n "${LINKEDIN_CLIENT_ID:-}" ] && [ -n "${LINKEDIN_CLIENT_SECRET:-}" ]; then
+            put_secret LINKEDIN_CLIENT_ID "$LINKEDIN_CLIENT_ID"
+            put_secret LINKEDIN_CLIENT_SECRET "$LINKEDIN_CLIENT_SECRET"
+            echo 'LinkedIn OAuth configurado.'
+          elif [ -n "${LINKEDIN_CLIENT_ID:-}${LINKEDIN_CLIENT_SECRET:-}" ]; then
+            echo '::warning::LinkedIn OAuth incompleto; informe CLIENT_ID e CLIENT_SECRET juntos.'
+          else
+            echo 'LinkedIn OAuth ainda não configurado; deploy segue normalmente.'
+          fi
+          if [ -n "${INSTAGRAM_CLIENT_ID:-}" ] && [ -n "${INSTAGRAM_CLIENT_SECRET:-}" ]; then
+            put_secret INSTAGRAM_CLIENT_ID "$INSTAGRAM_CLIENT_ID"
+            put_secret INSTAGRAM_CLIENT_SECRET "$INSTAGRAM_CLIENT_SECRET"
+            echo 'Instagram OAuth configurado.'
+          elif [ -n "${INSTAGRAM_CLIENT_ID:-}${INSTAGRAM_CLIENT_SECRET:-}" ]; then
+            echo '::warning::Instagram OAuth incompleto; informe CLIENT_ID e CLIENT_SECRET juntos.'
+          else
+            echo 'Instagram OAuth ainda não configurado; deploy segue normalmente.'
+          fi
       - name: Preparar site de produção
         env:
           API_BASE: ${{ steps.api.outputs.deployment-url }}
