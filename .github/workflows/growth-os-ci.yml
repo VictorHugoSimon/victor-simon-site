@@ -40,12 +40,14 @@ jobs:
         run: npm test
       - name: Verificação estrutural
         run: npm run verify
-      - name: Bloquear migration destrutiva
+      - name: Bloquear migrations destrutivas do Growth OS
         run: |
-          if grep -Eiq '\b(DROP|TRUNCATE|DELETE[[:space:]]+FROM)\b' migrations/0003_growth_os.sql; then
-            echo 'Migration Growth OS contém operação destrutiva.'
-            exit 1
-          fi
+          for file in migrations/0003_growth_os.sql migrations/0004_social_oauth.sql; do
+            if grep -Eiq '\b(DROP|TRUNCATE|DELETE[[:space:]]+FROM)\b' "$file"; then
+              echo "Migration destrutiva detectada: $file"
+              exit 1
+            fi
+          done
       - name: Validar import do Worker
         run: node -e "import('./backend/worker.mjs').then(m => { if (typeof m.default?.fetch !== 'function') process.exit(1) })"
       - name: Build staging
