@@ -82,7 +82,7 @@ jobs:
             ? process.env.ADMIN_PASSWORD
             : crypto.randomBytes(48).toString('base64url');
           if (!hasAdminPassword) {
-            console.log('::warning::ADMIN_PASSWORD ausente. STAGING seguirá com login administrativo bloqueado até novo deploy com senha configurada.');
+            console.log('::warning::ADMIN_PASSWORD ausente. STAGING seguirá com login administrativo efetivamente bloqueado até novo deploy com senha configurada.');
           }
           const values = {
             AUTH_SECRET: derive('auth'),
