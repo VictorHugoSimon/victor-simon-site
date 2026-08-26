@@ -31,3 +31,28 @@ jobs:
         run: npm ci
       - name: Testes, estrutura e builds
         run: npm run ci
+
+  production-readiness:
+    name: Credenciais produção isoladas
+    if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/growth-os-v2' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Verificar presença sem revelar valores
+        env:
+          HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+          HAS_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+          HAS_ADMIN: ${{ secrets.ADMIN_PASSWORD != '' }}
+        run: |
+          set -euo pipefail
+          missing=''
+          [ "$HAS_TOKEN" = 'true' ] || missing="${missing} CLOUDFLARE_API_TOKEN"
+          [ "$HAS_ADMIN" = 'true' ] || missing="${missing} ADMIN_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::error title=Perfil sem credenciais próprias de produção::Ausentes:${missing}. Nenhum valor foi exibido."
+            exit 1
+          fi
+          if [ "$HAS_ACCOUNT" != 'true' ]; then
+            echo '::notice title=Account ID opcional::CLOUDFLARE_ACCOUNT_ID ausente; o bootstrap tentará descoberta automática.'
+          fi
+          echo 'Perfil possui credenciais mínimas próprias para deploy Cloudflare.'
