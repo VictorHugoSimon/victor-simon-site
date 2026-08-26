@@ -175,24 +175,31 @@ Ordem do ciclo agendado:
 - falhas externas não liberam bypass de aprovação.
 
 ## Ativação externa ainda necessária
-A engenharia fica pronta no repositório e no pipeline, mas a ativação real depende de recursos que não podem ser inventados nem gravados em Git:
+A engenharia está pronta no repositório e no pipeline. Para publicar infraestrutura real na Cloudflare falta apenas uma credencial obrigatória, cadastrada diretamente nos GitHub Environments `staging` e `production`:
 
-1. GitHub Environment/Secrets próprios do `victor-simon-site`:
-   - `CLOUDFLARE_API_TOKEN`;
-   - `ADMIN_PASSWORD`.
-2. Para publicação social real, quando desejado:
-   - `LINKEDIN_CLIENT_ID` / `LINKEDIN_CLIENT_SECRET`;
-   - `INSTAGRAM_CLIENT_ID` / `INSTAGRAM_CLIENT_SECRET`;
-   - aprovação/permissões dos apps oficiais nas plataformas.
-3. Métricas automáticas de redes sociais dependem das permissões de analytics concedidas pelos provedores. Até lá, o Growth Loop aceita ingestão manual/API sem fabricar dados.
+- `CLOUDFLARE_API_TOKEN` — obrigatório para o deploy Cloudflare.
+- `ADMIN_PASSWORD` — opcional para o deploy. Quando ausente, o pipeline gera uma senha aleatória descartável em runtime e mantém o login administrativo efetivamente bloqueado até um novo deploy com senha definida.
+- `CLOUDFLARE_ACCOUNT_ID` — opcional; o bootstrap tenta descoberta segura da conta quando possível.
+
+Para publicação social real, quando desejado:
+- `LINKEDIN_CLIENT_ID` / `LINKEDIN_CLIENT_SECRET`;
+- `INSTAGRAM_CLIENT_ID` / `INSTAGRAM_CLIENT_SECRET`;
+- aprovação/permissões dos apps oficiais nas plataformas.
+
+Métricas automáticas de redes sociais dependem das permissões de analytics concedidas pelos provedores. Até lá, o Growth Loop aceita ingestão manual/API sem fabricar dados.
+
+## Estado operacional atual
+Os gates de `staging` e `production` foram executados no GitHub Actions e registraram `HAS_TOKEN: false`. Por isso os jobs de testar, migrar e publicar foram corretamente marcados como `skipped`. Nenhuma credencial de outro projeto é reutilizada.
+
+Assim que `CLOUDFLARE_API_TOKEN` existir no Environment correspondente, o próprio workflow executará CI, bootstrap Cloudflare, migrations D1 incluindo `0005_growth_loop.sql`, Worker, Pages e smoke test.
 
 ## Critério de conclusão técnica
-Growth Loop V1 é considerado tecnicamente concluído quando:
-- migrations e builds passam no CI;
+Growth Loop V1 já atende aos critérios de engenharia:
+- migrations e builds passaram no CI;
 - Worker entry importa core + Growth Loop + fila;
-- site e Blog preservam UX e passam QA visual;
+- site e Blog preservam UX e passaram QA visual;
 - aprovação humana continua protegida;
-- PR é integrada ao `main` por squash;
-- `staging` é sincronizado ao mesmo commit.
+- PR foi integrada ao `main` por squash;
+- branch `staging` foi sincronizada com o release.
 
-A publicação efetiva na Cloudflare só é considerada concluída quando as credenciais próprias do projeto existirem e o deploy real for validado; o pipeline não reutiliza recursos ou secrets de outros projetos.
+A conclusão operacional do deploy Cloudflare exige apenas o token próprio do projeto e a validação dos jobs reais de publicação. O pipeline não reutiliza recursos ou Secrets de outros projetos.
