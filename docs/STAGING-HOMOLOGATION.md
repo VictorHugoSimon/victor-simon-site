@@ -15,7 +15,7 @@ Opcional:
 - `INSTAGRAM_CLIENT_ID` + `INSTAGRAM_CLIENT_SECRET` para ativar Instagram.
 
 ## Pipeline esperado
-1. `npm run ci`;
+1. `npm run ci` no head atual;
 2. validar `CLOUDFLARE_API_TOKEN` e `ADMIN_PASSWORD`;
 3. identificar a conta Cloudflare automaticamente quando possível;
 4. confirmar/criar D1, Pages e R2 opcional;
@@ -39,4 +39,5 @@ Opcional:
 - status dos conectores sociais;
 - após registrar apps oficiais, OAuth LinkedIn/Instagram e publicação de teste com conteúdo aprovado.
 
-Não promover para `main` antes da conclusão deste checklist.
+## Gate
+O head atual ainda precisa de nova execução de `CI` e `Growth OS CI`, pois contém mudanças posteriores ao último head verde conhecido. Não promover para `main` antes da conclusão desse CI e deste checklist em STAGING.
