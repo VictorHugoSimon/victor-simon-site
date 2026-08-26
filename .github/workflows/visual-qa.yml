@@ -1,4 +1,4 @@
-name: Visual QA STAGING
+name: Visual QA
 
 on:
   pull_request:
@@ -10,62 +10,97 @@ permissions:
   contents: read
 
 jobs:
-  visual-qa:
+  staging:
+    name: STAGING visual QA
     if: ${{ github.event_name != 'pull_request' || github.head_ref == 'feature/growth-os-v2' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-
       - name: Validar STAGING publicado
         shell: bash
         run: |
           set -euo pipefail
           BASE='https://victor-simon-site-staging.pages.dev'
-
           curl -fsSL --retry 5 --retry-delay 2 "$BASE/" -o /tmp/home.html
           grep -Fq 'Clareza para decidir. Método para executar. Resultado para crescer.' /tmp/home.html
-          grep -Fq 'id="consultoria"' /tmp/home.html
-          grep -Fq 'id="servicos"' /tmp/home.html
-          grep -Fq 'id="metodo"' /tmp/home.html
-          grep -Fq 'id="projetos"' /tmp/home.html
-          grep -Fq 'id="ifarm"' /tmp/home.html
+          for id in consultoria servicos metodo projetos ifarm; do grep -Fq "id=\"$id\"" /tmp/home.html; done
           grep -Fq '/assets/profile-v2.css' /tmp/home.html
           ! grep -Fq 'class="initials">VS</span>' /tmp/home.html
-
           curl -fsSL --retry 5 --retry-delay 2 "$BASE/blog" -o /tmp/blog.html
           grep -Fq 'articleView' /tmp/blog.html
           grep -Fq 'Gestão que funciona no mundo real.' /tmp/blog.html
-
           curl -fsSL --retry 5 --retry-delay 2 "$BASE/painel.html" -o /tmp/painel.html
           grep -Fq 'Growth OS' /tmp/painel.html
-
-          echo 'STAGING funcional confirmado.'
-
       - name: Instalar Chromium
         run: npx --yes playwright@1.55.0 install --with-deps chromium
-
-      - name: Capturar evidências visuais
+      - name: Capturar STAGING
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p qa/screenshots
+          mkdir -p qa/staging
           BASE='https://victor-simon-site-staging.pages.dev'
-          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='1440,1000' "$BASE/" qa/screenshots/home-desktop.png
-          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='390,844' "$BASE/" qa/screenshots/home-mobile.png
-          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='1440,1000' "$BASE/blog" qa/screenshots/blog-desktop.png
-          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='1440,1000' "$BASE/painel.html" qa/screenshots/painel-login.png
-
-      - name: Publicar evidências
+          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='1440,1000' "$BASE/" qa/staging/home-desktop.png
+          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='390,844' "$BASE/" qa/staging/home-mobile.png
+          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='1440,1000' "$BASE/blog" qa/staging/blog-desktop.png
+          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='1440,1000' "$BASE/painel.html" qa/staging/painel-login.png
+      - name: Publicar STAGING
         uses: actions/upload-artifact@v4
         with:
           name: visual-qa-staging
-          path: qa/screenshots/*.png
+          path: qa/staging/*.png
+          if-no-files-found: error
+          retention-days: 7
+
+  production:
+    name: PRODUÇÃO temporária visual QA
+    if: ${{ github.event_name != 'pull_request' || github.head_ref == 'feature/growth-os-v2' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validar produção publicada
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://victor-hugo-teixeira-simon.pages.dev'
+          curl -fsSL --retry 5 --retry-delay 2 "$BASE/" -o /tmp/home.html
+          grep -Fq 'Clareza para decidir. Método para executar. Resultado para crescer.' /tmp/home.html
+          for id in consultoria servicos metodo projetos ifarm; do grep -Fq "id=\"$id\"" /tmp/home.html; done
+          grep -Fq '/assets/profile-v2.css' /tmp/home.html
+          ! grep -Fq 'class="initials">VS</span>' /tmp/home.html
+          curl -fsSL --retry 5 --retry-delay 2 "$BASE/blog" -o /tmp/blog.html
+          grep -Fq 'articleView' /tmp/blog.html
+          grep -Fq 'Gestão que funciona no mundo real.' /tmp/blog.html
+          curl -fsSL --retry 5 --retry-delay 2 "$BASE/painel.html" -o /tmp/painel.html
+          grep -Fq 'Growth OS' /tmp/painel.html
+          echo 'Produção temporária contém a V2 homologada.'
+      - name: Instalar Chromium
+        run: npx --yes playwright@1.55.0 install --with-deps chromium
+      - name: Capturar produção
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p qa/production
+          BASE='https://victor-hugo-teixeira-simon.pages.dev'
+          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='1440,1000' "$BASE/" qa/production/home-desktop.png
+          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='390,844' "$BASE/" qa/production/home-mobile.png
+          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='1440,1000' "$BASE/blog" qa/production/blog-desktop.png
+          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='1440,1000' "$BASE/painel.html" qa/production/painel-login.png
+      - name: Publicar produção
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-qa-production
+          path: qa/production/*.png
           if-no-files-found: error
           retention-days: 7
