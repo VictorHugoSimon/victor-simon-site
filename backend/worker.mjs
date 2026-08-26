@@ -14,6 +14,7 @@ import { buildDossier, qualifyLead } from './qualify.mjs';
 import { firstReply } from './chatbot.mjs';
 import { handleGrowthRoute } from './growth.mjs';
 import { handleGrowthAutomationRoute } from './growth-automation.mjs';
+import { handleSocialRoute } from './social.mjs';
 
 const publicPostRoutes = new Set(['/api/leads', '/api/events']);
 
@@ -71,7 +72,7 @@ async function health(env) {
   try {
     await env.DB.prepare('SELECT 1 AS ok').first();
     return json({ status: 'ok', environment: env.ENVIRONMENT || 'unknown', database: 'ok', latencyMs: Date.now() - started });
-  } catch (error) {
+  } catch {
     return json({ status: 'degraded', environment: env.ENVIRONMENT || 'unknown', database: 'error' }, { status: 503 });
   }
 }
@@ -308,6 +309,8 @@ async function route(request, env) {
   const path = url.pathname.replace(/\/+$/, '') || '/';
 
   if (request.method === 'OPTIONS') return new Response(null, { status: 204 });
+  const socialResponse = await handleSocialRoute(request, env);
+  if (socialResponse) return socialResponse;
   const automationResponse = await handleGrowthAutomationRoute(request, env);
   if (automationResponse) return automationResponse;
   const growthResponse = await handleGrowthRoute(request, env);
