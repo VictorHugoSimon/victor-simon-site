@@ -29,6 +29,7 @@ const config = {
   vars: {
     ENVIRONMENT: environment,
     CORS_ORIGIN: process.env.CORS_ORIGIN,
+    PUBLIC_API_BASE: String(process.env.API_BASE || '').replace(/\/+$/, ''),
     ADMIN_USERNAME: process.env.ADMIN_USERNAME || 'admin',
     LINKEDIN_API_VERSION: process.env.LINKEDIN_API_VERSION || '202604',
     META_API_VERSION: process.env.META_API_VERSION || 'v26.0',
