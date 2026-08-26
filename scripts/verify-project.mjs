@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 const required = [
   'backend/worker.mjs',
   'backend/growth.mjs',
+  'backend/growth-automation.mjs',
   'migrations/0001_initial_schema.sql',
   'migrations/0002_seed_reference_data.sql',
   'migrations/0003_growth_os.sql',
@@ -12,6 +13,7 @@ const required = [
   'public/painel.html',
   'public/assets/profile-v2.css',
   'public/assets/growth-panel.css',
+  'public/assets/growth-automation-ui.js',
   'public/_headers',
   'public/robots.txt',
   '.github/workflows/ci.yml',
@@ -41,7 +43,17 @@ for (const name of ['Content-Security-Policy', 'X-Content-Type-Options', 'Referr
   if (!headers.includes(name)) throw new Error(`Cabeçalho ausente: ${name}`);
 }
 
-const generatedConfig = await readFile(resolve(process.cwd(), 'scripts/generate-wrangler-config.mjs'), 'utf8');
+const [generatedConfig, bootstrap, automation, workerSource] = await Promise.all([
+  readFile(resolve(process.cwd(), 'scripts/generate-wrangler-config.mjs'), 'utf8'),
+  readFile(resolve(process.cwd(), 'scripts/bootstrap-cloudflare.mjs'), 'utf8'),
+  readFile(resolve(process.cwd(), 'backend/growth-automation.mjs'), 'utf8'),
+  readFile(resolve(process.cwd(), 'backend/worker.mjs'), 'utf8')
+]);
 if (!generatedConfig.includes("ai: { binding: 'AI' }")) throw new Error('Binding Workers AI ausente na configuração gerada.');
+if (!generatedConfig.includes("binding: 'MEDIA'")) throw new Error('Binding R2 MEDIA opcional ausente.');
+if (!bootstrap.includes('/r2/buckets')) throw new Error('Bootstrap não provisiona R2.');
+if (!automation.includes('@cf/black-forest-labs/flux-1-schnell')) throw new Error('Art Director não usa modelo de imagem esperado.');
+if (!automation.includes('social_repurposer')) throw new Error('Social Repurposer ausente.');
+if (!workerSource.includes("handleGrowthAutomationRoute")) throw new Error('Worker não roteia automações Growth.');
 
-console.log(`Projeto validado: ${tables.length} tabelas base + ${growthTables.length} tabelas Growth OS e arquivos essenciais presentes.`);
+console.log(`Projeto validado: ${tables.length} tabelas base + ${growthTables.length} tabelas Growth OS, IA, R2 opcional e automações presentes.`);
