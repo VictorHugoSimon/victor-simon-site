@@ -25,6 +25,7 @@ jobs:
       DEPLOY_ENVIRONMENT: staging
       WORKER_NAME: victor-simon-api-staging
       D1_DATABASE_NAME: vhs-db-staging
+      R2_BUCKET_NAME: victor-simon-media-staging
       PAGES_PROJECT_NAME: victor-simon-site-staging
       PAGES_PRODUCTION_BRANCH: staging
       CORS_ORIGIN: https://victor-simon-site-staging.pages.dev
@@ -66,7 +67,7 @@ jobs:
             fs.appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);
           }
           NODE
-      - name: Garantir D1 e Pages
+      - name: Garantir D1, Pages e R2 opcional
         id: bootstrap
         run: node scripts/bootstrap-cloudflare.mjs
       - name: Gerar configuração do Worker
@@ -97,6 +98,7 @@ jobs:
       - name: Preparar site sem indexação
         env:
           API_BASE: ${{ steps.api.outputs.deployment-url }}
+          SITE_BASE: https://victor-simon-site-staging.pages.dev
           REQUIRE_API_BASE: 1
         run: npm run build:staging
       - name: Publicar Cloudflare Pages
