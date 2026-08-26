@@ -129,6 +129,14 @@ Os deploys de STAGING/Produção aceitam, sem torná-los obrigatórios:
 
 Se o par de um canal estiver completo, o pipeline grava os valores como Worker Secrets. Se estiver ausente, o deploy-base segue normalmente e o painel mostra o conector como não configurado.
 
+## Gate de infraestrutura atual
+A engenharia da branch não depende de credenciais sociais para passar CI. O deploy real na Cloudflare, porém, depende dos três valores base do GitHub Actions:
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_API_TOKEN`
+- `ADMIN_PASSWORD`
+
+Os últimos deploys reais de STAGING e produção confirmaram que testes/builds passam antes desse gate, mas os três valores chegaram vazios e impediram bootstrap/migrations/deploy. O conector GitHub disponível nesta sessão não expõe API de escrita de Secrets, portanto esses valores não podem ser criados por código ou commit sem quebrar o modelo de segurança.
+
 ## Roadmap atualizado
 ### Fundação — implementada na branch
 - Home V2 fiel ao protótipo
@@ -149,14 +157,13 @@ Se o par de um canal estiver completo, o pipeline grava os valores como Worker S
 - workspace de conexão/publicação no painel
 
 ### Próxima fase — homologação real
-1. disponibilizar credenciais Cloudflare no GitHub Actions
-2. CI completo do head
-3. publicar em STAGING
-4. aplicar migrations `0003` e `0004`
-5. validar Home, Blog, painel, D1, Workers AI e R2
-6. registrar os apps oficiais LinkedIn/Instagram com os redirect URIs do Worker STAGING
-7. disponibilizar os quatro secrets sociais
-8. conectar contas reais e fazer publicações de teste aprovadas
+1. disponibilizar os três secrets base da Cloudflare no GitHub Actions
+2. executar CI/deploy de `staging`
+3. aplicar migrations `0003` e `0004`
+4. validar Home, Blog, painel, D1, Workers AI e R2
+5. registrar os apps oficiais LinkedIn/Instagram com os redirect URIs retornados pelo Worker STAGING
+6. disponibilizar os quatro secrets sociais
+7. conectar contas reais e fazer publicações de teste aprovadas
 
 ### Growth Loop
 - status/retry assíncrono de publicação
