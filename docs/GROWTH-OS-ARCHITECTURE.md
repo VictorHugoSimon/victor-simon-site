@@ -134,7 +134,7 @@ A engenharia da branch não depende de credenciais sociais para passar CI. Para 
 - `CLOUDFLARE_API_TOKEN`
 - `ADMIN_PASSWORD`
 
-`CLOUDFLARE_ACCOUNT_ID` tornou-se **opcional**. O bootstrap consulta as contas acessíveis pelo token e escolhe automaticamente quando existe uma única conta ou quando encontra inequivocamente os recursos do projeto. Se houver múltiplas contas indistinguíveis, pode-se informar `CLOUDFLARE_ACCOUNT_ID` ou `CLOUDFLARE_ACCOUNT_NAME` para desambiguar.
+`CLOUDFLARE_ACCOUNT_ID` tornou-se **opcional**. O bootstrap consulta as contas acessíveis pelo token e escolhe automaticamente quando existe uma única conta ou quando encontra inequivocamente os recursos do projeto. Se houver múltiplas contas indistinguíveis, pode-se informar `CLOUDFLARE_ACCOUNT_ID` ou `CLOUDFLARE_ACCOUNT_NAME` para desambiguar. Para a descoberta automática, o token precisa conseguir listar as contas acessíveis.
 
 Os últimos deploys reais de STAGING e produção, executados antes dessa melhoria, confirmaram que testes/builds passavam e paravam no gate de credenciais. O pipeline também foi corrigido para não sobrescrever `AUTH_SECRET`, `ROBOT_KEY` e `ADMIN_PASSWORD_HASH` derivados em runtime com GitHub Secrets vazios.
 
