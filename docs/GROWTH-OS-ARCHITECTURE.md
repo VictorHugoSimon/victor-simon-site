@@ -130,12 +130,15 @@ Os deploys de STAGING/Produção aceitam, sem torná-los obrigatórios:
 Se o par de um canal estiver completo, o pipeline grava os valores como Worker Secrets. Se estiver ausente, o deploy-base segue normalmente e o painel mostra o conector como não configurado.
 
 ## Gate de infraestrutura atual
-A engenharia da branch não depende de credenciais sociais para passar CI. O deploy real na Cloudflare, porém, depende dos três valores base do GitHub Actions:
-- `CLOUDFLARE_ACCOUNT_ID`
+A engenharia da branch não depende de credenciais sociais para passar CI. Para o deploy real na Cloudflare, o pipeline agora exige apenas:
 - `CLOUDFLARE_API_TOKEN`
 - `ADMIN_PASSWORD`
 
-Os últimos deploys reais de STAGING e produção confirmaram que testes/builds passam antes desse gate, mas os três valores chegaram vazios e impediram bootstrap/migrations/deploy. O conector GitHub disponível nesta sessão não expõe API de escrita de Secrets, portanto esses valores não podem ser criados por código ou commit sem quebrar o modelo de segurança.
+`CLOUDFLARE_ACCOUNT_ID` tornou-se **opcional**. O bootstrap consulta as contas acessíveis pelo token e escolhe automaticamente quando existe uma única conta ou quando encontra inequivocamente os recursos do projeto. Se houver múltiplas contas indistinguíveis, pode-se informar `CLOUDFLARE_ACCOUNT_ID` ou `CLOUDFLARE_ACCOUNT_NAME` para desambiguar.
+
+Os últimos deploys reais de STAGING e produção, executados antes dessa melhoria, confirmaram que testes/builds passavam e paravam no gate de credenciais. O pipeline também foi corrigido para não sobrescrever `AUTH_SECRET`, `ROBOT_KEY` e `ADMIN_PASSWORD_HASH` derivados em runtime com GitHub Secrets vazios.
+
+O conector GitHub disponível nesta sessão não expõe API de escrita de Secrets; portanto `CLOUDFLARE_API_TOKEN` e `ADMIN_PASSWORD` não podem ser criados por commit ou chamada do conector sem quebrar o modelo de segurança.
 
 ## Roadmap atualizado
 ### Fundação — implementada na branch
@@ -155,9 +158,11 @@ Os últimos deploys reais de STAGING e produção confirmaram que testes/builds 
 - conector LinkedIn e publicação de texto aprovada
 - conector Instagram e publicação de imagem aprovada
 - workspace de conexão/publicação no painel
+- descoberta automática de Account ID Cloudflare
+- deploy social opcional e não bloqueante
 
 ### Próxima fase — homologação real
-1. disponibilizar os três secrets base da Cloudflare no GitHub Actions
+1. disponibilizar `CLOUDFLARE_API_TOKEN` e `ADMIN_PASSWORD` no GitHub Actions
 2. executar CI/deploy de `staging`
 3. aplicar migrations `0003` e `0004`
 4. validar Home, Blog, painel, D1, Workers AI e R2
