@@ -27,13 +27,16 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await cp(source, output, { recursive: true });
 
-for (const file of ['index.html', 'blog.html', 'painel.html', 'assets/app.js', 'assets/blog.js', 'assets/panel.js']) {
+for (const file of ['index.html', 'blog.html', 'painel.html', 'assets/app.js', 'assets/blog.js', 'assets/panel.js', 'assets/growth-automation-ui.js']) {
   const path = resolve(output, file);
   let content = await readFile(path, 'utf8');
   content = content
     .replaceAll('__API_BASE__', apiBase)
     .replaceAll('__ENVIRONMENT__', environment)
     .replaceAll(legacySiteBase, siteBase);
+  if (file === 'painel.html' && !content.includes('/assets/growth-automation-ui.js')) {
+    content = content.replace('</body>', '  <script type="module" src="/assets/growth-automation-ui.js"></script>\n</body>');
+  }
   await writeFile(path, content);
 }
 
