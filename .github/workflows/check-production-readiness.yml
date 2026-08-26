@@ -47,3 +47,27 @@ jobs:
           HAS_SECRET: ${{ secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
         run: |
           [ "$HAS_SECRET" = 'true' ]
+
+  target-production-url:
+    name: URL victor-hugo-teixeira-simon.pages.dev
+    if: ${{ github.event_name != 'pull_request' || github.head_ref == 'feature/growth-os-v2' }}
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Verificar alvo de produção
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 15 --retry 2 'https://victor-hugo-teixeira-simon.pages.dev/' -o /tmp/site.html
+          grep -Fq 'Victor Hugo' /tmp/site.html
+
+  legacy-production-url:
+    name: URL victor-simon-site.pages.dev
+    if: ${{ github.event_name != 'pull_request' || github.head_ref == 'feature/growth-os-v2' }}
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Verificar alvo legado
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 15 --retry 2 'https://victor-simon-site.pages.dev/' -o /tmp/site.html
+          grep -Fq 'Victor Hugo' /tmp/site.html
