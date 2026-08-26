@@ -1,0 +1,52 @@
+name: Growth Loop Autofix
+
+on:
+  push:
+    branches:
+      - feature/growth-loop-v1
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: feature/growth-loop-v1
+          fetch-depth: 0
+      - name: Aplicar correções pontuais
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          growth = Path('backend/growth-loop.mjs')
+          text = growth.read_text()
+          old = "const reachScore = clamp(Math.log10(Math.max(1, impressions + reach) + 1) * 22);"
+          new = "const reachScore = impressions + reach > 0 ? clamp(Math.log10(impressions + reach + 1) * 22) : 0;"
+          if old in text:
+              text = text.replace(old, new, 1)
+              growth.write_text(text)
+          elif new not in text:
+              raise SystemExit('Trecho do Content Score não encontrado')
+
+          test = Path('tests/growth-loop.test.mjs')
+          text = test.read_text()
+          text = text.replace("  assert.ok(api.includes('approved') === false || true, 'placeholder');\n", '')
+          test.write_text(text)
+          PY
+      - name: Validar e gravar
+        run: |
+          npm ci
+          npm test
+          if git diff --quiet; then
+            echo "Nenhuma correção pendente."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/growth-loop.mjs tests/growth-loop.test.mjs
+          git commit -m "fix: correct zero-metric Content Score"
+          git push origin HEAD:feature/growth-loop-v1
