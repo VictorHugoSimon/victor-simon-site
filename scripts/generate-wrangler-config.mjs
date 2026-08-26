@@ -27,6 +27,7 @@ const config = {
     CORS_ORIGIN: process.env.CORS_ORIGIN,
     ADMIN_USERNAME: process.env.ADMIN_USERNAME || 'admin'
   },
+  ai: { binding: 'AI' },
   d1_databases: [{
     binding: 'DB',
     database_name: process.env.D1_DATABASE_NAME,
@@ -37,4 +38,4 @@ const config = {
 
 const output = resolve(process.cwd(), 'wrangler.generated.jsonc');
 await writeFile(output, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
-console.log(`Configuração Wrangler gerada para ${environment}.`);
+console.log(`Configuração Wrangler gerada para ${environment} com D1 e Workers AI.`);
