@@ -10,14 +10,8 @@ test('Home V2 preserva posicionamento e seções do protótipo', async () => {
   const html = await text('public/index.html');
   for (const expected of [
     'Clareza para decidir. Método para executar. Resultado para crescer.',
-    'id="consultoria"',
-    'id="servicos"',
-    'id="metodo"',
-    'id="projetos"',
-    'id="ifarm"',
-    'id="sobre"',
-    'id="contato"',
-    '/blog.html'
+    'id="consultoria"', 'id="servicos"', 'id="metodo"', 'id="projetos"',
+    'id="ifarm"', 'id="sobre"', 'id="contato"', '/blog.html'
   ]) assert.ok(html.includes(expected), `Home sem ${expected}`);
   assert.ok(!html.includes('class="initials">VS</span>'), 'Placeholder VS antigo voltou para a Home.');
 });
@@ -31,6 +25,7 @@ test('Growth OS mantém módulos executivos e nove agentes', async () => {
   for (const agent of ['Radar', 'Estrategista', 'Pesquisador', 'Blog Writer', 'Social Repurposer', 'Revisor', 'Publicador', 'Analytics', 'Growth Coach']) {
     assert.ok(html.includes(`>${agent}<`), `Painel sem agente ${agent}`);
   }
+  for (const action of ['newIdeaButton', 'generateDraftButton', 'contentKanban']) assert.ok(html.includes(`id="${action}"`), `Painel sem ação ${action}`);
 });
 
 test('Blog possui leitura completa e conteúdo evergreen', async () => {
@@ -50,6 +45,22 @@ test('Migration Growth OS é aditiva e contém entidades essenciais', async () =
   ];
   for (const table of tables) assert.match(sql, new RegExp(`CREATE TABLE IF NOT EXISTS\\s+${table}\\b`, 'i'));
   assert.doesNotMatch(sql, /\b(?:DROP|TRUNCATE|DELETE\s+FROM)\b/i, 'Migration Growth OS contém operação destrutiva.');
+});
+
+test('Growth API possui CRUD editorial, aprovação e geração assistida', async () => {
+  const [growth, worker, config] = await Promise.all([
+    text('backend/growth.mjs'),
+    text('backend/worker.mjs'),
+    text('scripts/generate-wrangler-config.mjs')
+  ]);
+  for (const route of [
+    '/api/growth/summary', '/api/growth/ideas', '/api/growth/content', '/api/growth/calendar',
+    '/api/growth/recommendations', '/api/growth/agents/runs', '/api/growth/generate'
+  ]) assert.ok(growth.includes(route), `Growth API sem ${route}`);
+  assert.ok(growth.includes('/decision'), 'Fluxo de aprovação/rejeição ausente.');
+  assert.ok(growth.includes("@cf/zai-org/glm-4.7-flash"), 'Modelo editorial Workers AI ausente.');
+  assert.ok(worker.includes("import { handleGrowthRoute } from './growth.mjs'"), 'Worker principal não integra Growth API.');
+  assert.ok(config.includes("ai: { binding: 'AI' }"), 'Binding Workers AI ausente.');
 });
 
 test('CSP permite somente a origem externa necessária para a foto temporária', async () => {
