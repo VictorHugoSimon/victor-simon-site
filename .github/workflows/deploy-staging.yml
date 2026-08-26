@@ -14,8 +14,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  readiness:
+    name: Verificar credencial própria de staging
+    runs-on: ubuntu-latest
+    environment: staging
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - name: Verificar sem expor valores
+        id: check
+        env:
+          HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+        run: |
+          if [ "$HAS_TOKEN" = 'true' ]; then
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+            echo 'Credencial própria de STAGING disponível.'
+          else
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo '::notice title=Deploy STAGING aguardando credencial própria::O build continua validado por CI; nenhuma credencial de outro projeto será reutilizada.'
+          fi
+
   deploy:
     name: Testar, migrar e publicar staging
+    needs: readiness
+    if: ${{ needs.readiness.outputs.ready == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:
@@ -60,7 +82,7 @@ jobs:
             ? process.env.ADMIN_PASSWORD
             : crypto.randomBytes(48).toString('base64url');
           if (!hasAdminPassword) {
-            console.log('::warning::ADMIN_PASSWORD ausente. STAGING seguirá com login administrativo efetivamente bloqueado até novo deploy com senha configurada.');
+            console.log('::warning::ADMIN_PASSWORD ausente. STAGING seguirá com login administrativo bloqueado até novo deploy com senha configurada.');
           }
           const values = {
             AUTH_SECRET: derive('auth'),
@@ -110,20 +132,10 @@ jobs:
           if [ -n "${LINKEDIN_CLIENT_ID:-}" ] && [ -n "${LINKEDIN_CLIENT_SECRET:-}" ]; then
             put_secret LINKEDIN_CLIENT_ID "$LINKEDIN_CLIENT_ID"
             put_secret LINKEDIN_CLIENT_SECRET "$LINKEDIN_CLIENT_SECRET"
-            echo 'LinkedIn OAuth configurado.'
-          elif [ -n "${LINKEDIN_CLIENT_ID:-}${LINKEDIN_CLIENT_SECRET:-}" ]; then
-            echo '::warning::LinkedIn OAuth incompleto; informe CLIENT_ID e CLIENT_SECRET juntos.'
-          else
-            echo 'LinkedIn OAuth ainda não configurado; deploy segue normalmente.'
           fi
           if [ -n "${INSTAGRAM_CLIENT_ID:-}" ] && [ -n "${INSTAGRAM_CLIENT_SECRET:-}" ]; then
             put_secret INSTAGRAM_CLIENT_ID "$INSTAGRAM_CLIENT_ID"
             put_secret INSTAGRAM_CLIENT_SECRET "$INSTAGRAM_CLIENT_SECRET"
-            echo 'Instagram OAuth configurado.'
-          elif [ -n "${INSTAGRAM_CLIENT_ID:-}${INSTAGRAM_CLIENT_SECRET:-}" ]; then
-            echo '::warning::Instagram OAuth incompleto; informe CLIENT_ID e CLIENT_SECRET juntos.'
-          else
-            echo 'Instagram OAuth ainda não configurado; deploy segue normalmente.'
           fi
       - name: Preparar site sem indexação
         env:
