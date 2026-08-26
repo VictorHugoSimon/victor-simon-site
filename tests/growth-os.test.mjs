@@ -85,6 +85,33 @@ test('Automação multicanal gera derivados e mídia privada em R2', async () =>
   assert.ok(ui.includes('Biblioteca de Mídia'), 'Painel não expõe biblioteca de mídia.');
 });
 
+test('OAuth social usa estado descartável, criptografia e escopos atuais', async () => {
+  const [sql, social, worker, ui, build] = await Promise.all([
+    text('migrations/0004_social_oauth.sql'),
+    text('backend/social.mjs'),
+    text('backend/worker.mjs'),
+    text('public/assets/social-ui.js'),
+    text('scripts/prepare-pages.mjs')
+  ]);
+  for (const table of ['oauth_states', 'social_credentials']) {
+    assert.match(sql, new RegExp(`CREATE TABLE IF NOT EXISTS\\s+${table}\\b`, 'i'));
+  }
+  assert.doesNotMatch(sql, /\b(?:DROP|TRUNCATE|DELETE\s+FROM)\b/i, 'Migration social contém operação destrutiva.');
+  assert.ok(social.includes("{ name: 'AES-GCM'"), 'Tokens sociais não usam AES-GCM.');
+  assert.ok(social.includes('state_hash'), 'OAuth não persiste state com hash.');
+  assert.ok(social.includes('consumed_at'), 'OAuth state não possui consumo único.');
+  assert.ok(social.includes('w_member_social'), 'Escopo LinkedIn de publicação ausente.');
+  assert.ok(social.includes('instagram_business_basic'), 'Escopo Instagram básico atual ausente.');
+  assert.ok(social.includes('instagram_business_content_publish'), 'Escopo Instagram de publicação atual ausente.');
+  assert.ok(social.includes('approved_content_required'), 'Publicador não exige conteúdo aprovado.');
+  assert.ok(social.includes("https://api.linkedin.com/rest/posts"), 'Posts API atual do LinkedIn ausente.');
+  assert.ok(social.includes("https://graph.instagram.com/"), 'Instagram Graph API ausente.');
+  assert.ok(worker.includes('handleSocialRoute'), 'Worker não integra conectores sociais.');
+  assert.ok(ui.includes('Conectores oficiais'), 'Painel não expõe workspace de conectores oficiais.');
+  assert.ok(ui.includes('Publicar no LinkedIn') && ui.includes('Publicar no Instagram'), 'Painel não expõe publicação aprovada.');
+  assert.ok(build.includes('/assets/social-ui.js'), 'Build não injeta interface social.');
+});
+
 test('CSP permite somente a origem externa necessária para a foto temporária', async () => {
   const headers = await text('public/_headers');
   assert.match(headers, /img-src[^\n]+https:\/\/avatars\.githubusercontent\.com/);
