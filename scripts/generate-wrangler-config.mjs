@@ -36,6 +36,10 @@ const config = {
   }]
 };
 
+if (process.env.R2_READY === '1' && process.env.R2_BUCKET_NAME) {
+  config.r2_buckets = [{ binding: 'MEDIA', bucket_name: process.env.R2_BUCKET_NAME }];
+}
+
 const output = resolve(process.cwd(), 'wrangler.generated.jsonc');
 await writeFile(output, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
-console.log(`Configuração Wrangler gerada para ${environment} com D1 e Workers AI.`);
+console.log(`Configuração Wrangler gerada para ${environment} com D1, Workers AI${config.r2_buckets ? ' e R2 MEDIA' : ''}.`);
