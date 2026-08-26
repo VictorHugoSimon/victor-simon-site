@@ -53,7 +53,6 @@ test('Growth Loop expõe agentes, pesquisa, métricas e ciclo completo', async (
   for (const agent of ["'radar'", "'strategist'", "'researcher'", "'analytics'", "'growth_coach'"]) {
     assert.ok(api.includes(agent), `Agente ausente: ${agent}`);
   }
-  assert.ok(api.includes('approved') === false || true, 'placeholder');
   assert.ok(api.includes('safeExternalUrl'), 'Pesquisador não protege URL externa.');
 });
 

@@ -46,7 +46,7 @@ function metricScores(m = {}) {
   const seoImpressions = Math.max(0, Number(m.seoImpressions || m.seo_impressions || 0));
   const avgPosition = Number(m.avgPosition ?? m.avg_position ?? 100);
 
-  const reachScore = clamp(Math.log10(Math.max(1, impressions + reach) + 1) * 22);
+  const reachScore = impressions + reach > 0 ? clamp(Math.log10(impressions + reach + 1) * 22) : 0;
   const engagementRate = impressions ? (engagements / impressions) * 100 : 0;
   const engagementScore = clamp(engagementRate * 12);
   const clickRate = impressions ? (clicks / impressions) * 100 : 0;
