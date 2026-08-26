@@ -46,7 +46,8 @@ function injectPublicExperience(content, file) {
     '<meta name="twitter:card" content="summary">',
     `<meta name="twitter:title" content="${title}">`,
     `<meta name="twitter:description" content="${description}">`,
-    `<meta name="twitter:image" content="${socialImage}">`
+    `<meta name="twitter:image" content="${socialImage}">`,
+    '<style>.skip-link{position:fixed;left:16px;top:12px;z-index:9999;transform:translateY(-160%);background:#111827;color:#fff;padding:10px 14px;border-radius:10px;font:700 14px/1.2 Inter,system-ui,sans-serif;box-shadow:0 10px 30px rgba(17,24,39,.18)}.skip-link:focus{transform:translateY(0);outline:3px solid rgba(176,138,74,.45);outline-offset:2px}</style>'
   ].join('\n  ');
   if (!content.includes('property="og:title"')) {
     content = content.replace('</head>', `  ${meta}\n</head>`);
