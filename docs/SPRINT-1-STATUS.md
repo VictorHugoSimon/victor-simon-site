@@ -20,7 +20,7 @@ Para executar homologação real em Cloudflare são necessários no GitHub Actio
 - `CLOUDFLARE_API_TOKEN`
 - `ADMIN_PASSWORD`
 
-`CLOUDFLARE_ACCOUNT_ID` é opcional e normalmente será descoberto automaticamente.
+`CLOUDFLARE_ACCOUNT_ID` é opcional. O bootstrap tenta descobri-lo automaticamente; ele só precisa ser informado se o token acessar múltiplas contas e o projeto não permitir uma escolha inequívoca.
 
 Para ativar as integrações depois do deploy-base:
 - LinkedIn: `LINKEDIN_CLIENT_ID` + `LINKEDIN_CLIENT_SECRET`;
