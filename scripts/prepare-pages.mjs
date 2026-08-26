@@ -58,6 +58,9 @@ function injectPublicExperience(content, file) {
   if (!content.includes('id="main-content"')) {
     content = content.replace('<main>', '<main id="main-content" tabindex="-1">');
   }
+  if (isBlog && !content.includes('/assets/attribution.js')) {
+    content = content.replace('</body>', '  <script type="module" src="/assets/attribution.js"></script>\n</body>');
+  }
   return content;
 }
 
@@ -65,7 +68,7 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await cp(source, output, { recursive: true });
 
-for (const file of ['index.html', 'blog.html', 'painel.html', 'assets/app.js', 'assets/blog.js', 'assets/panel.js', 'assets/growth-automation-ui.js', 'assets/social-ui.js', 'assets/growth-loop-ui.js']) {
+for (const file of ['index.html', 'blog.html', 'painel.html', 'assets/app.js', 'assets/blog.js', 'assets/panel.js', 'assets/growth-automation-ui.js', 'assets/social-ui.js', 'assets/growth-loop-ui.js', 'assets/attribution.js']) {
   const path = resolve(output, file);
   let content = await readFile(path, 'utf8');
   content = content
