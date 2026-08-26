@@ -11,6 +11,7 @@ const outputName = arg('--out', 'dist');
 const apiBase = String(process.env.API_BASE || 'https://api.example.invalid').replace(/\/+$/, '');
 const siteBase = String(process.env.SITE_BASE || 'https://victor-hugo-teixeira-simon.pages.dev').replace(/\/+$/, '');
 const legacySiteBase = 'https://www.victorhugoteixeirasimon.com.br';
+const socialImage = 'https://avatars.githubusercontent.com/u/111150704?v=4';
 if (!['staging', 'production'].includes(environment)) throw new Error('Ambiente inválido.');
 if (process.env.REQUIRE_API_BASE === '1' && apiBase.includes('example.invalid')) {
   throw new Error('API_BASE é obrigatória no deploy.');
@@ -21,6 +22,42 @@ const source = resolve(root, 'public');
 const output = resolve(root, outputName);
 if (!output.startsWith(`${root}${sep}`) || !['dist', 'dist-staging', 'dist-production'].includes(basename(output))) {
   throw new Error('Diretório de saída não permitido.');
+}
+
+function injectPublicExperience(content, file) {
+  if (!['index.html', 'blog.html'].includes(file)) return content;
+  const isBlog = file === 'blog.html';
+  const title = isBlog
+    ? 'Blog | Victor Hugo Simon'
+    : 'Victor Hugo | Consultoria, Produto, Projetos e Tecnologia';
+  const description = isBlog
+    ? 'Conteúdos práticos sobre PMO, produto digital, governança, tecnologia, IA e inteligência de mercado.'
+    : 'Victor Hugo Teixeira Simon — consultoria executiva em Produto, Projetos, PMO, Transformação Digital, IA, Automação e Inteligência de Mercado.';
+  const url = `${siteBase}${isBlog ? '/blog.html' : '/'}`;
+  const meta = [
+    '<meta name="theme-color" content="#111827">',
+    '<meta name="referrer" content="strict-origin-when-cross-origin">',
+    '<meta property="og:type" content="website">',
+    `<meta property="og:title" content="${title}">`,
+    `<meta property="og:description" content="${description}">`,
+    `<meta property="og:url" content="${url}">`,
+    `<meta property="og:image" content="${socialImage}">`,
+    '<meta property="og:image:alt" content="Victor Hugo Teixeira Simon">',
+    '<meta name="twitter:card" content="summary">',
+    `<meta name="twitter:title" content="${title}">`,
+    `<meta name="twitter:description" content="${description}">`,
+    `<meta name="twitter:image" content="${socialImage}">`
+  ].join('\n  ');
+  if (!content.includes('property="og:title"')) {
+    content = content.replace('</head>', `  ${meta}\n</head>`);
+  }
+  if (!content.includes('class="skip-link"')) {
+    content = content.replace('<body>', '<body>\n  <a class="skip-link" href="#main-content">Pular para o conteúdo principal</a>');
+  }
+  if (!content.includes('id="main-content"')) {
+    content = content.replace('<main>', '<main id="main-content" tabindex="-1">');
+  }
+  return content;
 }
 
 await rm(output, { recursive: true, force: true });
@@ -34,6 +71,7 @@ for (const file of ['index.html', 'blog.html', 'painel.html', 'assets/app.js', '
     .replaceAll('__API_BASE__', apiBase)
     .replaceAll('__ENVIRONMENT__', environment)
     .replaceAll(legacySiteBase, siteBase);
+  content = injectPublicExperience(content, file);
   if (file === 'painel.html') {
     if (!content.includes('/assets/growth-automation-ui.js')) {
       content = content.replace('</body>', '  <script type="module" src="/assets/growth-automation-ui.js"></script>\n</body>');
