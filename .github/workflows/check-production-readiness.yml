@@ -9,6 +9,7 @@ on:
 permissions:
   contents: read
 
+# Verificação somente de presença; nenhum secret é exibido.
 jobs:
   readiness:
     if: ${{ github.event_name != 'pull_request' || github.head_ref == 'feature/growth-os-v2' }}
