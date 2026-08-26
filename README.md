@@ -1,12 +1,36 @@
 # Site Victor Hugo Teixeira Simon
 
-Aplicação bilíngue com site institucional, blog, painel restrito, API Cloudflare Worker e banco D1. O repositório possui CI/CD completo e idempotente para **staging** e **produção**.
+Aplicação bilíngue com site institucional, blog, painel restrito, API Cloudflare Worker e banco D1. O repositório possui CI/CD próprio para **staging** e **produção**.
+
+## Isolamento obrigatório
+
+Este projeto é independente de qualquer outro repositório, cliente ou ambiente.
+
+- não reutilizar Secrets, workflows, bancos, Workers, Pages ou branches de outros projetos;
+- não usar Instituto Államo ou qualquer outro projeto como ponte de deploy;
+- todas as credenciais de produção devem pertencer ao próprio repositório `VictorHugoSimon/victor-simon-site`;
+- nomes de recursos Cloudflare são exclusivos deste projeto.
+
+## Ambientes
+
+| Ambiente | Pages | Worker | D1 |
+|---|---|---|---|
+| STAGING | `victor-simon-site-staging.pages.dev` | `victor-simon-api-staging` | `vhs-db-staging` |
+| PRODUÇÃO | `victor-hugo-teixeira-simon.pages.dev` | `victor-simon-api` | `vhs-db` |
+
+A URL temporária oficial de produção é:
+
+`https://victor-hugo-teixeira-simon.pages.dev`
+
+O domínio `www.victorhugoteixeirasimon.com.br` fica reservado para associação futura quando voltar a estar disponível.
 
 ## O que acontece automaticamente
 
 - qualquer pull request para `staging` ou `main` executa testes, verificação estrutural e build;
-- push em `staging` cria/confirma `vhs-db-staging` e `victor-simon-site-staging`, aplica migrações, publica o Worker e o Pages e executa smoke test;
-- push em `main` repete o processo com `vhs-db`, `victor-simon-site` e o Worker de produção;
+- push em `staging` publica o ambiente de homologação quando as credenciais próprias de `staging` estiverem configuradas;
+- push em `main` verifica primeiro se existem credenciais próprias do Environment `production`;
+- sem credenciais próprias, o deploy Cloudflare é ignorado com segurança, sem reaproveitar credenciais de outro projeto;
+- com credenciais próprias, o pipeline cria/confirma recursos, aplica migrações, publica Worker e Pages e executa smoke test;
 - o endereço real do Worker é injetado no site durante o pipeline;
 - staging recebe `robots.txt` e `X-Robots-Tag` de bloqueio de indexação;
 - migrações são versionadas e aplicadas antes do código da API.
@@ -14,22 +38,20 @@ Aplicação bilíngue com site institucional, blog, painel restrito, API Cloudfl
 ## Fluxo de branches
 
 ```text
-feature/* → pull request → staging → homologação → pull request → main → produção
+feature/* → pull request → staging/homologação → main → produção
 ```
 
-## Única configuração manual obrigatória
+## Configuração de credenciais
 
-Crie no GitHub os Environments `staging` e `production` e adicione em ambos:
+Crie no GitHub os Environments `staging` e `production` e adicione, diretamente no GitHub e nunca no chat:
 
 | Secret | Conteúdo |
 |---|---|
-| `CLOUDFLARE_ACCOUNT_ID` | ID da conta Cloudflare |
-| `CLOUDFLARE_API_TOKEN` | Token com Workers Scripts Edit, D1 Edit e Pages Edit |
-| `ADMIN_PASSWORD` | Senha administrativa forte, informada somente no GitHub |
+| `CLOUDFLARE_ACCOUNT_ID` | ID da conta Cloudflare; opcional quando o token permite descoberta segura da conta |
+| `CLOUDFLARE_API_TOKEN` | Token próprio deste projeto com Workers Scripts Edit, D1 Edit e Pages Edit |
+| `ADMIN_PASSWORD` | Senha administrativa forte do Growth OS |
 
-O pipeline deriva `AUTH_SECRET` e `ROBOT_KEY` com HMAC-SHA-256 e transforma
-`ADMIN_PASSWORD` em SHA-256 antes de enviar os valores ao Worker. Os valores
-derivados são mascarados nos logs e nunca entram no repositório.
+O pipeline deriva `AUTH_SECRET` e `ROBOT_KEY` com HMAC-SHA-256 e transforma `ADMIN_PASSWORD` em SHA-256 antes de enviar os valores ao Worker. Os valores derivados são mascarados nos logs e nunca entram no repositório.
 
 Não coloque valores secretos em arquivos, commits, issues ou logs.
 
@@ -46,12 +68,12 @@ Para executar a API local com D1, copie `wrangler.example.jsonc` para um arquivo
 
 ## Publicação
 
-1. Faça push do código inicial em `main`.
-2. Crie a branch `staging` a partir de `main`.
-3. Configure os secrets dos dois Environments.
-4. Execute **Deploy STAGING** manualmente ou faça push em `staging`.
-5. Valide a URL retornada pelo job.
-6. Faça merge de `staging` em `main` para publicar produção.
+1. Desenvolva em branch própria e abra PR.
+2. Execute CI e Visual QA contra STAGING.
+3. Homologue Home desktop/mobile, Blog e Growth OS.
+4. Promova o código para `main`.
+5. Quando o Environment `production` tiver credenciais próprias, o workflow **Deploy PRODUCTION** publica em `victor-hugo-teixeira-simon.pages.dev`.
+6. Execute smoke test e QA da URL publicada.
 
 O projeto Pages e o D1 são criados automaticamente se ainda não existirem.
 
@@ -63,10 +85,10 @@ O projeto Pages e o D1 são criados automaticamente se ainda não existirem.
 - CORS é específico por ambiente;
 - endpoints públicos possuem rate limit, limite de payload e validação;
 - queries D1 usam prepared statements;
-- credenciais vivem apenas nos secrets do GitHub/Cloudflare.
+- credenciais vivem apenas nos Secrets do GitHub/Cloudflare deste projeto.
 
-## Domínio
+## Domínio oficial futuro
 
-Depois do primeiro deploy de produção, associe `www.victorhugoteixeirasimon.com.br` ao projeto Pages `victor-simon-site` e configure o domínio raiz para redirecionar ao `www`. Essa etapa depende do acesso DNS do domínio.
+Quando `www.victorhugoteixeirasimon.com.br` estiver novamente disponível, associe-o ao projeto Pages `victor-hugo-teixeira-simon`. O endereço `pages.dev` deve continuar como contingência técnica.
 
 Veja o checklist operacional em [`docs/DEPLOY-CHECKLIST.md`](docs/DEPLOY-CHECKLIST.md).

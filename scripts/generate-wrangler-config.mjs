@@ -25,8 +25,11 @@ const config = {
   vars: {
     ENVIRONMENT: environment,
     CORS_ORIGIN: process.env.CORS_ORIGIN,
-    ADMIN_USERNAME: process.env.ADMIN_USERNAME || 'admin'
+    ADMIN_USERNAME: process.env.ADMIN_USERNAME || 'admin',
+    LINKEDIN_API_VERSION: process.env.LINKEDIN_API_VERSION || '202604',
+    META_API_VERSION: process.env.META_API_VERSION || 'v26.0'
   },
+  ai: { binding: 'AI' },
   d1_databases: [{
     binding: 'DB',
     database_name: process.env.D1_DATABASE_NAME,
@@ -35,6 +38,10 @@ const config = {
   }]
 };
 
+if (process.env.R2_READY === '1' && process.env.R2_BUCKET_NAME) {
+  config.r2_buckets = [{ binding: 'MEDIA', bucket_name: process.env.R2_BUCKET_NAME }];
+}
+
 const output = resolve(process.cwd(), 'wrangler.generated.jsonc');
 await writeFile(output, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
-console.log(`Configuração Wrangler gerada para ${environment}.`);
+console.log(`Configuração Wrangler gerada para ${environment} com D1, Workers AI, LinkedIn ${config.vars.LINKEDIN_API_VERSION}, Meta ${config.vars.META_API_VERSION}${config.r2_buckets ? ' e R2 MEDIA' : ''}.`);

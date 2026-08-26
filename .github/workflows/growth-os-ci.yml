@@ -1,0 +1,64 @@
+name: Growth OS CI
+
+on:
+  push:
+    branches: [feature/growth-os-v2]
+  pull_request:
+    branches: [main, staging]
+    paths:
+      - 'backend/**'
+      - 'migrations/**'
+      - 'public/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - '.github/workflows/growth-os-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: growth-os-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validar Growth OS V2
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Dependências
+        run: npm ci
+      - name: Testes completos
+        run: npm test
+      - name: Verificação estrutural
+        run: npm run verify
+      - name: Bloquear migrations destrutivas do Growth OS
+        run: |
+          for file in migrations/0003_growth_os.sql migrations/0004_social_oauth.sql; do
+            if grep -Eiq '\b(DROP|TRUNCATE|DELETE[[:space:]]+FROM)\b' "$file"; then
+              echo "Migration destrutiva detectada: $file"
+              exit 1
+            fi
+          done
+      - name: Validar import do Worker
+        run: node -e "import('./backend/worker.mjs').then(m => { if (typeof m.default?.fetch !== 'function') process.exit(1) })"
+      - name: Build staging
+        env:
+          API_BASE: https://api-staging.example.com
+          SITE_BASE: https://victor-hugo-teixeira-simon.pages.dev
+          REQUIRE_API_BASE: '1'
+        run: npm run build:staging
+      - name: Build production
+        env:
+          API_BASE: https://api.example.com
+          SITE_BASE: https://victor-hugo-teixeira-simon.pages.dev
+          REQUIRE_API_BASE: '1'
+        run: npm run build:production

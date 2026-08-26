@@ -11,6 +11,15 @@
     "ENVIRONMENT": "local",
     "CORS_ORIGIN": "http://localhost:8788"
   },
+  "ai": {
+    "binding": "AI"
+  },
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "victor-simon-media-local"
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",

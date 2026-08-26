@@ -14,8 +14,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  readiness:
+    name: Verificar credenciais próprias
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - name: Verificar sem expor valores
+        id: check
+        env:
+          HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+          HAS_ADMIN: ${{ secrets.ADMIN_PASSWORD != '' }}
+        run: |
+          if [ "$HAS_TOKEN" = 'true' ] && [ "$HAS_ADMIN" = 'true' ]; then
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+            echo 'Credenciais próprias de produção disponíveis.'
+          else
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo '::notice title=Deploy Cloudflare aguardando credenciais próprias::O código está pronto, mas nenhuma credencial de outro projeto será reutilizada.'
+          fi
+
   deploy:
     name: Testar, migrar e publicar produção
+    needs: readiness
+    if: ${{ needs.readiness.outputs.ready == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:
@@ -25,9 +48,10 @@ jobs:
       DEPLOY_ENVIRONMENT: production
       WORKER_NAME: victor-simon-api
       D1_DATABASE_NAME: vhs-db
-      PAGES_PROJECT_NAME: victor-simon-site
+      R2_BUCKET_NAME: victor-simon-media
+      PAGES_PROJECT_NAME: victor-hugo-teixeira-simon
       PAGES_PRODUCTION_BRANCH: main
-      CORS_ORIGIN: https://www.victorhugoteixeirasimon.com.br,https://victor-simon-site.pages.dev
+      CORS_ORIGIN: https://victor-hugo-teixeira-simon.pages.dev,https://www.victorhugoteixeirasimon.com.br
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
@@ -49,7 +73,7 @@ jobs:
           node --input-type=module <<'NODE'
           import crypto from 'node:crypto';
           import fs from 'node:fs';
-          for (const key of ['CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN', 'ADMIN_PASSWORD']) {
+          for (const key of ['CLOUDFLARE_API_TOKEN', 'ADMIN_PASSWORD']) {
             if (!process.env[key]) throw new Error(`Secret ausente: ${key}`);
           }
           const derive = (label) => crypto
@@ -66,7 +90,7 @@ jobs:
             fs.appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);
           }
           NODE
-      - name: Garantir D1 e Pages
+      - name: Garantir D1, Pages e R2 opcional
         id: bootstrap
         run: node scripts/bootstrap-cloudflare.mjs
       - name: Gerar configuração do Worker
@@ -75,7 +99,6 @@ jobs:
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: 4.124.0
           command: d1 migrations apply vhs-db --remote --config wrangler.generated.jsonc
       - name: Publicar API Worker
@@ -83,20 +106,47 @@ jobs:
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: 4.124.0
           command: deploy --config wrangler.generated.jsonc
           secrets: |
             AUTH_SECRET
             ROBOT_KEY
             ADMIN_PASSWORD_HASH
+      - name: Configurar OAuth social opcional
         env:
-          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-          ROBOT_KEY: ${{ secrets.ROBOT_KEY }}
-          ADMIN_PASSWORD_HASH: ${{ secrets.ADMIN_PASSWORD_HASH }}
+          LINKEDIN_CLIENT_ID: ${{ secrets.LINKEDIN_CLIENT_ID }}
+          LINKEDIN_CLIENT_SECRET: ${{ secrets.LINKEDIN_CLIENT_SECRET }}
+          INSTAGRAM_CLIENT_ID: ${{ secrets.INSTAGRAM_CLIENT_ID }}
+          INSTAGRAM_CLIENT_SECRET: ${{ secrets.INSTAGRAM_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          put_secret() {
+            local name="$1"
+            local value="$2"
+            printf '%s' "$value" | npx wrangler@4.124.0 secret put "$name" --config wrangler.generated.jsonc >/dev/null
+          }
+          if [ -n "${LINKEDIN_CLIENT_ID:-}" ] && [ -n "${LINKEDIN_CLIENT_SECRET:-}" ]; then
+            put_secret LINKEDIN_CLIENT_ID "$LINKEDIN_CLIENT_ID"
+            put_secret LINKEDIN_CLIENT_SECRET "$LINKEDIN_CLIENT_SECRET"
+            echo 'LinkedIn OAuth configurado.'
+          elif [ -n "${LINKEDIN_CLIENT_ID:-}${LINKEDIN_CLIENT_SECRET:-}" ]; then
+            echo '::warning::LinkedIn OAuth incompleto; informe CLIENT_ID e CLIENT_SECRET juntos.'
+          else
+            echo 'LinkedIn OAuth ainda não configurado; deploy segue normalmente.'
+          fi
+          if [ -n "${INSTAGRAM_CLIENT_ID:-}" ] && [ -n "${INSTAGRAM_CLIENT_SECRET:-}" ]; then
+            put_secret INSTAGRAM_CLIENT_ID "$INSTAGRAM_CLIENT_ID"
+            put_secret INSTAGRAM_CLIENT_SECRET "$INSTAGRAM_CLIENT_SECRET"
+            echo 'Instagram OAuth configurado.'
+          elif [ -n "${INSTAGRAM_CLIENT_ID:-}${INSTAGRAM_CLIENT_SECRET:-}" ]; then
+            echo '::warning::Instagram OAuth incompleto; informe CLIENT_ID e CLIENT_SECRET juntos.'
+          else
+            echo 'Instagram OAuth ainda não configurado; deploy segue normalmente.'
+          fi
       - name: Preparar site de produção
         env:
           API_BASE: ${{ steps.api.outputs.deployment-url }}
+          SITE_BASE: https://victor-hugo-teixeira-simon.pages.dev
           REQUIRE_API_BASE: 1
         run: npm run build:production
       - name: Publicar Cloudflare Pages
@@ -104,9 +154,8 @@ jobs:
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: 4.124.0
-          command: pages deploy dist --project-name=victor-simon-site --branch=main
+          command: pages deploy dist --project-name=victor-hugo-teixeira-simon --branch=main
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
       - name: Smoke test
         env:

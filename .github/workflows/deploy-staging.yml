@@ -25,6 +25,7 @@ jobs:
       DEPLOY_ENVIRONMENT: staging
       WORKER_NAME: victor-simon-api-staging
       D1_DATABASE_NAME: vhs-db-staging
+      R2_BUCKET_NAME: victor-simon-media-staging
       PAGES_PROJECT_NAME: victor-simon-site-staging
       PAGES_PRODUCTION_BRANCH: staging
       CORS_ORIGIN: https://victor-simon-site-staging.pages.dev
@@ -49,24 +50,29 @@ jobs:
           node --input-type=module <<'NODE'
           import crypto from 'node:crypto';
           import fs from 'node:fs';
-          for (const key of ['CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN', 'ADMIN_PASSWORD']) {
-            if (!process.env[key]) throw new Error(`Secret ausente: ${key}`);
-          }
+          if (!process.env.CLOUDFLARE_API_TOKEN) throw new Error('Secret ausente: CLOUDFLARE_API_TOKEN');
           const derive = (label) => crypto
             .createHmac('sha256', process.env.CLOUDFLARE_API_TOKEN)
             .update(`victor-simon-site:${process.env.DEPLOY_ENVIRONMENT}:${label}`)
             .digest('hex');
+          const hasAdminPassword = Boolean(process.env.ADMIN_PASSWORD);
+          const effectiveAdminPassword = hasAdminPassword
+            ? process.env.ADMIN_PASSWORD
+            : crypto.randomBytes(48).toString('base64url');
+          if (!hasAdminPassword) {
+            console.log('::warning::ADMIN_PASSWORD ausente. STAGING seguirá com login administrativo efetivamente bloqueado até novo deploy com senha configurada.');
+          }
           const values = {
             AUTH_SECRET: derive('auth'),
             ROBOT_KEY: derive('robot'),
-            ADMIN_PASSWORD_HASH: crypto.createHash('sha256').update(process.env.ADMIN_PASSWORD).digest('hex')
+            ADMIN_PASSWORD_HASH: crypto.createHash('sha256').update(effectiveAdminPassword).digest('hex')
           };
           for (const [key, value] of Object.entries(values)) {
             console.log(`::add-mask::${value}`);
             fs.appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);
           }
           NODE
-      - name: Garantir D1 e Pages
+      - name: Garantir D1, Pages e R2 opcional
         id: bootstrap
         run: node scripts/bootstrap-cloudflare.mjs
       - name: Gerar configuração do Worker
@@ -75,7 +81,6 @@ jobs:
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: 4.124.0
           command: d1 migrations apply vhs-db-staging --remote --config wrangler.generated.jsonc
       - name: Publicar API Worker
@@ -83,20 +88,47 @@ jobs:
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: 4.124.0
           command: deploy --config wrangler.generated.jsonc
           secrets: |
             AUTH_SECRET
             ROBOT_KEY
             ADMIN_PASSWORD_HASH
+      - name: Configurar OAuth social opcional
         env:
-          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-          ROBOT_KEY: ${{ secrets.ROBOT_KEY }}
-          ADMIN_PASSWORD_HASH: ${{ secrets.ADMIN_PASSWORD_HASH }}
+          LINKEDIN_CLIENT_ID: ${{ secrets.LINKEDIN_CLIENT_ID }}
+          LINKEDIN_CLIENT_SECRET: ${{ secrets.LINKEDIN_CLIENT_SECRET }}
+          INSTAGRAM_CLIENT_ID: ${{ secrets.INSTAGRAM_CLIENT_ID }}
+          INSTAGRAM_CLIENT_SECRET: ${{ secrets.INSTAGRAM_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          put_secret() {
+            local name="$1"
+            local value="$2"
+            printf '%s' "$value" | npx wrangler@4.124.0 secret put "$name" --config wrangler.generated.jsonc >/dev/null
+          }
+          if [ -n "${LINKEDIN_CLIENT_ID:-}" ] && [ -n "${LINKEDIN_CLIENT_SECRET:-}" ]; then
+            put_secret LINKEDIN_CLIENT_ID "$LINKEDIN_CLIENT_ID"
+            put_secret LINKEDIN_CLIENT_SECRET "$LINKEDIN_CLIENT_SECRET"
+            echo 'LinkedIn OAuth configurado.'
+          elif [ -n "${LINKEDIN_CLIENT_ID:-}${LINKEDIN_CLIENT_SECRET:-}" ]; then
+            echo '::warning::LinkedIn OAuth incompleto; informe CLIENT_ID e CLIENT_SECRET juntos.'
+          else
+            echo 'LinkedIn OAuth ainda não configurado; deploy segue normalmente.'
+          fi
+          if [ -n "${INSTAGRAM_CLIENT_ID:-}" ] && [ -n "${INSTAGRAM_CLIENT_SECRET:-}" ]; then
+            put_secret INSTAGRAM_CLIENT_ID "$INSTAGRAM_CLIENT_ID"
+            put_secret INSTAGRAM_CLIENT_SECRET "$INSTAGRAM_CLIENT_SECRET"
+            echo 'Instagram OAuth configurado.'
+          elif [ -n "${INSTAGRAM_CLIENT_ID:-}${INSTAGRAM_CLIENT_SECRET:-}" ]; then
+            echo '::warning::Instagram OAuth incompleto; informe CLIENT_ID e CLIENT_SECRET juntos.'
+          else
+            echo 'Instagram OAuth ainda não configurado; deploy segue normalmente.'
+          fi
       - name: Preparar site sem indexação
         env:
           API_BASE: ${{ steps.api.outputs.deployment-url }}
+          SITE_BASE: https://victor-simon-site-staging.pages.dev
           REQUIRE_API_BASE: 1
         run: npm run build:staging
       - name: Publicar Cloudflare Pages
@@ -104,7 +136,6 @@ jobs:
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: 4.124.0
           command: pages deploy dist --project-name=victor-simon-site-staging --branch=staging
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
