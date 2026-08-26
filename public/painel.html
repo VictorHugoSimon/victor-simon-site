@@ -6,23 +6,104 @@
   <meta name="api-base" content="__API_BASE__">
   <meta name="environment" content="__ENVIRONMENT__">
   <meta name="robots" content="noindex,nofollow,noarchive">
-  <title>Painel de Marketing | Acesso restrito</title>
+  <title>Victor Hugo Growth OS | Acesso restrito</title>
   <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/growth-panel.css">
 </head>
-<body class="panel-body">
+<body>
   <main id="loginView" class="login-shell">
     <form class="card login-card" id="loginForm">
-      <div class="eyebrow">Acesso restrito</div><h2>Painel de Marketing</h2><p class="muted">Entre com as credenciais administrativas configuradas no ambiente.</p>
+      <div class="eyebrow">Acesso restrito</div>
+      <h2>Victor Hugo Growth OS</h2>
+      <p class="muted">Marketing, conteúdo, CRM, agentes e indicadores em um único painel.</p>
       <div class="field"><label for="username">Usuário</label><input id="username" name="username" autocomplete="username" required></div>
       <div class="field"><label for="password">Senha</label><input id="password" name="password" type="password" autocomplete="current-password" required></div>
-      <button class="btn btn-primary" type="submit">Entrar</button><div class="form-status" id="loginStatus" aria-live="polite"></div>
+      <button class="btn btn-primary" type="submit">Entrar</button>
+      <div class="form-status" id="loginStatus" aria-live="polite"></div>
     </form>
   </main>
-  <main id="panelView" class="panel">
-    <header class="panel-header"><div class="container panel-title"><div><div class="eyebrow">Marketing / Comercial / Financeiro</div><h3>Painel Executivo</h3></div><button class="btn btn-small" id="logoutButton" type="button">Sair</button></div></header>
-    <section><div class="container"><div class="kpis" id="kpis"></div></div></section>
-    <section><div class="container"><div class="section-head"><div class="eyebrow">Leads prontos para execução</div><h2>Prioridade humana</h2><p class="muted">Somente contatos com score igual ou superior a 70.</p></div><div class="table-wrap"><table><thead><tr><th>Lead</th><th>Empresa</th><th>Score</th><th>Estágio</th><th>Entrada</th></tr></thead><tbody id="readyLeads"></tbody></table><div class="empty" id="readyEmpty">Carregando…</div></div></div></section>
-    <section><div class="container"><div class="section-head"><div class="eyebrow">CRM interno</div><h2>Pipeline</h2></div><div class="table-wrap"><table><thead><tr><th>Nome</th><th>Contato</th><th>Empresa</th><th>Score</th><th>Estágio</th></tr></thead><tbody id="leads"></tbody></table><div class="empty" id="leadsEmpty">Carregando…</div></div></div></section>
+
+  <main id="panelView" class="growth-shell panel-hidden">
+    <header class="growth-topbar"><div class="inner"><div class="growth-brand"><span class="mark">VH</span><div><strong>Growth OS</strong><span>Victor Hugo • Marketing & Autoridade</span></div></div><button class="growth-btn" id="logoutButton" type="button">Sair</button></div></header>
+    <div class="growth-layout">
+      <aside class="growth-sidebar">
+        <nav class="growth-nav" aria-label="Growth OS">
+          <div class="group">Gestão</div>
+          <button class="active" data-view="executive">Visão Executiva</button>
+          <button data-view="content">Conteúdo</button>
+          <button data-view="calendar">Calendário</button>
+          <button data-view="agents">Agentes IA</button>
+          <div class="group">Canais</div>
+          <button data-view="channels">Canais & Social</button>
+          <button data-view="seo">Blog & SEO</button>
+          <div class="group">Negócio</div>
+          <button data-view="crm">CRM & Leads</button>
+          <button data-view="insights">Recomendações IA</button>
+        </nav>
+      </aside>
+
+      <section class="growth-main">
+        <div class="growth-view active" data-view-panel="executive">
+          <div class="growth-head"><div><h1>Visão Executiva</h1><p>Panorama de autoridade, aquisição, conteúdo e oportunidades.</p></div><div class="growth-actions"><a class="growth-btn" href="/" target="_blank">Abrir site</a><a class="growth-btn primary" href="/blog.html" target="_blank">Abrir blog</a></div></div>
+          <div class="growth-grid" id="growthKpis"></div>
+          <div class="growth-two">
+            <section class="growth-panel"><div class="growth-panel-head"><div><h2>Funil atual</h2><p>Da audiência à oportunidade comercial.</p></div></div><div id="funnelSummary" class="growth-empty">Carregando indicadores...</div></section>
+            <section class="growth-panel"><div class="growth-panel-head"><div><h2>Conteúdo & autoridade</h2><p>Produção e presença digital.</p></div></div><div id="contentSummary" class="growth-empty">Carregando conteúdo...</div></section>
+          </div>
+          <section class="growth-panel"><div class="growth-panel-head"><div><h2>Próximas recomendações</h2><p>Ações sugeridas para o próximo ciclo.</p></div></div><div id="executiveRecommendations"></div></section>
+        </div>
+
+        <div class="growth-view" data-view-panel="content">
+          <div class="growth-head"><div><h1>Central de Conteúdo</h1><p>Uma ideia principal distribuída em blog, LinkedIn, Instagram e formatos derivados.</p></div><div class="growth-actions"><button class="growth-btn primary" type="button" disabled>Nova pauta — próximo sprint</button></div></div>
+          <section class="growth-panel"><div class="growth-panel-head"><div><h2>Pipeline editorial</h2><p>Backlog → pesquisa → redação/design → aprovação → publicação.</p></div></div><div class="kanban"><div class="kanban-col"><h3>Backlog</h3><div class="kanban-empty">Pautas do Radar IA aparecerão aqui.</div></div><div class="kanban-col"><h3>Produção</h3><div class="kanban-empty">Conteúdos em pesquisa e redação.</div></div><div class="kanban-col"><h3>Revisão</h3><div class="kanban-empty">Aguardando revisão factual e de marca.</div></div><div class="kanban-col"><h3>Aprovado</h3><div class="kanban-empty">Pronto para agendamento.</div></div><div class="kanban-col"><h3>Publicado</h3><div id="publishedContent" class="kanban-empty">Carregando...</div></div></div></section>
+          <section class="growth-panel"><div class="growth-panel-head"><div><h2>Pilares editoriais</h2><p>Base de posicionamento profissional.</p></div></div><div class="channel-grid"><article class="channel-card"><strong>PMO & Governança</strong><span>Roadmap, RACI, riscos, indicadores e execução.</span></article><article class="channel-card"><strong>Produto & Delivery</strong><span>Discovery, backlog, métricas e integração de times.</span></article><article class="channel-card"><strong>IA & Automação</strong><span>Agentes, copilotos, suporte e produtividade.</span></article><article class="channel-card"><strong>Dados & Mercado</strong><span>BI, inteligência comercial e decisões.</span></article></div></section>
+        </div>
+
+        <div class="growth-view" data-view-panel="calendar">
+          <div class="growth-head"><div><h1>Calendário Editorial</h1><p>Planejamento semanal e mensal de distribuição.</p></div></div>
+          <section class="growth-panel"><div class="channel-grid"><article class="channel-card"><strong>Segunda</strong><span>LinkedIn • autoridade / opinião</span><span class="status pending">planejado</span></article><article class="channel-card"><strong>Terça</strong><span>Blog • conteúdo profundo / SEO</span><span class="status pending">planejado</span></article><article class="channel-card"><strong>Quarta</strong><span>Instagram • carrossel educativo</span><span class="status pending">planejado</span></article><article class="channel-card"><strong>Quinta</strong><span>LinkedIn • case / aprendizado</span><span class="status pending">planejado</span></article></div></section>
+          <section class="growth-panel"><div class="growth-panel-head"><div><h2>Fila de agendamento</h2><p>Será alimentada automaticamente após aprovação.</p></div></div><div class="growth-empty">Nenhum conteúdo agendado ainda.</div></section>
+        </div>
+
+        <div class="growth-view" data-view-panel="agents">
+          <div class="growth-head"><div><h1>Agentes IA</h1><p>Equipe digital especializada para pesquisa, criação, revisão, publicação e aprendizado.</p></div></div>
+          <div class="agent-grid" id="agentGrid">
+            <article class="agent-card"><span class="agent-id">A01</span><strong>Radar</strong><p>Monitora tendências, notícias, temas e oportunidades editoriais.</p><footer><span class="growth-badge">especificado</span><span>diário</span></footer></article>
+            <article class="agent-card"><span class="agent-id">A02</span><strong>Estrategista</strong><p>Prioriza pautas por aderência, autoridade e potencial de negócio.</p><footer><span class="growth-badge">especificado</span><span>sob demanda</span></footer></article>
+            <article class="agent-card"><span class="agent-id">A03</span><strong>Pesquisador</strong><p>Valida fatos, fontes, números e contexto antes da redação.</p><footer><span class="growth-badge">especificado</span><span>por pauta</span></footer></article>
+            <article class="agent-card"><span class="agent-id">A04</span><strong>Blog Writer</strong><p>Produz artigo completo, estrutura SEO, CTA e derivados.</p><footer><span class="growth-badge">especificado</span><span>por pauta</span></footer></article>
+            <article class="agent-card"><span class="agent-id">A05</span><strong>Social Repurposer</strong><p>Converte conteúdo em LinkedIn, Instagram, carrossel e roteiro.</p><footer><span class="growth-badge">especificado</span><span>por conteúdo</span></footer></article>
+            <article class="agent-card"><span class="agent-id">A06</span><strong>Revisor</strong><p>Valida marca, fatos, clareza, confidencialidade e riscos.</p><footer><span class="growth-badge">obrigatório</span><span>pré-publicação</span></footer></article>
+            <article class="agent-card"><span class="agent-id">A07</span><strong>Publicador</strong><p>Agenda, publica e registra IDs/URLs nos canais conectados.</p><footer><span class="growth-badge">planejado</span><span>agendado</span></footer></article>
+            <article class="agent-card"><span class="agent-id">A08</span><strong>Analytics</strong><p>Captura performance, calcula Content Score e atribuição.</p><footer><span class="growth-badge">planejado</span><span>diário</span></footer></article>
+            <article class="agent-card"><span class="agent-id">A09</span><strong>Growth Coach</strong><p>Transforma desempenho em recomendações para o próximo ciclo.</p><footer><span class="growth-badge">planejado</span><span>semanal</span></footer></article>
+          </div>
+        </div>
+
+        <div class="growth-view" data-view-panel="channels">
+          <div class="growth-head"><div><h1>Canais & Social</h1><p>Status das integrações e capacidade de publicação.</p></div></div>
+          <div class="channel-grid"><article class="channel-card"><strong>Site / Cloudflare</strong><span>Canal proprietário e hub de conversão.</span><span class="status ready">estrutura pronta</span></article><article class="channel-card"><strong>Blog</strong><span>API e página pública já existem.</span><span class="status ready">base pronta</span></article><article class="channel-card"><strong>LinkedIn</strong><span>OAuth, publicação e métricas serão conectados.</span><span class="status pending">integração pendente</span></article><article class="channel-card"><strong>Instagram</strong><span>Meta API, mídia e insights serão conectados.</span><span class="status pending">integração pendente</span></article></div>
+        </div>
+
+        <div class="growth-view" data-view-panel="seo">
+          <div class="growth-head"><div><h1>Blog & SEO</h1><p>Conteúdo orgânico, palavras-chave e autoridade.</p></div></div>
+          <div class="growth-grid"><article class="growth-kpi"><span>Artigos publicados</span><strong id="seoPostCount">0</strong><small>via API do blog</small></article><article class="growth-kpi"><span>Palavras-chave</span><strong id="seoKeywordCount">0</strong><small>base monitorada</small></article><article class="growth-kpi"><span>Google Search</span><strong>—</strong><small>Search Console pendente</small></article><article class="growth-kpi"><span>Organic leads</span><strong>—</strong><small>atribuição em implantação</small></article></div>
+          <section class="growth-panel"><div class="growth-panel-head"><div><h2>Últimos artigos</h2><p>Conteúdo já disponível no blog.</p></div></div><div id="blogPostsTable"></div></section>
+        </div>
+
+        <div class="growth-view" data-view-panel="crm">
+          <div class="growth-head"><div><h1>CRM & Leads</h1><p>Origem, qualificação e oportunidades.</p></div></div>
+          <div class="growth-grid" id="crmKpis"></div>
+          <section class="growth-panel"><div class="growth-panel-head"><div><h2>Leads prontos</h2><p>Score igual ou superior a 70.</p></div></div><div class="table-wrap"><table class="growth-table"><thead><tr><th>Lead</th><th>Empresa</th><th>Score</th><th>Estágio</th><th>Entrada</th></tr></thead><tbody id="readyLeads"></tbody></table><div class="growth-empty" id="readyEmpty">Carregando...</div></div></section>
+          <section class="growth-panel"><div class="growth-panel-head"><div><h2>Pipeline completo</h2></div></div><div class="table-wrap"><table class="growth-table"><thead><tr><th>Nome</th><th>Contato</th><th>Empresa</th><th>Score</th><th>Estágio</th></tr></thead><tbody id="leads"></tbody></table><div class="growth-empty" id="leadsEmpty">Carregando...</div></div></section>
+        </div>
+
+        <div class="growth-view" data-view-panel="insights">
+          <div class="growth-head"><div><h1>Recomendações IA</h1><p>Próximas melhores ações com base em conteúdo, audiência e conversão.</p></div></div>
+          <section class="growth-panel" id="insightList"></section>
+        </div>
+      </section>
+    </div>
   </main>
   <script type="module" src="/assets/panel.js"></script>
 </body>
