@@ -104,12 +104,30 @@ test('OAuth social usa estado descartável, criptografia e escopos atuais', asyn
   assert.ok(social.includes('instagram_business_basic'), 'Escopo Instagram básico atual ausente.');
   assert.ok(social.includes('instagram_business_content_publish'), 'Escopo Instagram de publicação atual ausente.');
   assert.ok(social.includes('approved_content_required'), 'Publicador não exige conteúdo aprovado.');
-  assert.ok(social.includes("https://api.linkedin.com/rest/posts"), 'Posts API atual do LinkedIn ausente.');
-  assert.ok(social.includes("https://graph.instagram.com/"), 'Instagram Graph API ausente.');
+  assert.ok(social.includes('https://api.linkedin.com/rest/posts'), 'Posts API atual do LinkedIn ausente.');
+  assert.ok(social.includes('https://graph.instagram.com/'), 'Instagram Graph API ausente.');
   assert.ok(worker.includes('handleSocialRoute'), 'Worker não integra conectores sociais.');
   assert.ok(ui.includes('Conectores oficiais'), 'Painel não expõe workspace de conectores oficiais.');
   assert.ok(ui.includes('Publicar no LinkedIn') && ui.includes('Publicar no Instagram'), 'Painel não expõe publicação aprovada.');
   assert.ok(build.includes('/assets/social-ui.js'), 'Build não injeta interface social.');
+});
+
+test('Deploy descobre conta Cloudflare e preserva secrets internos derivados', async () => {
+  const [bootstrap, staging, production] = await Promise.all([
+    text('scripts/bootstrap-cloudflare.mjs'),
+    text('.github/workflows/deploy-staging.yml'),
+    text('.github/workflows/deploy-production.yml')
+  ]);
+  assert.ok(bootstrap.includes('https://api.cloudflare.com/client/v4/accounts?per_page=50'), 'Bootstrap não descobre contas Cloudflare.');
+  assert.ok(bootstrap.includes('CLOUDFLARE_ACCOUNT_NAME'), 'Bootstrap não suporta desambiguação por nome de conta.');
+  assert.ok(bootstrap.includes('CLOUDFLARE_ACCOUNT_ID: accountId'), 'Bootstrap não exporta Account ID descoberto.');
+  for (const workflow of [staging, production]) {
+    assert.ok(workflow.includes("['CLOUDFLARE_API_TOKEN', 'ADMIN_PASSWORD']"), 'Deploy voltou a exigir Account ID manualmente.');
+    assert.ok(workflow.includes('secrets: |\n            AUTH_SECRET\n            ROBOT_KEY\n            ADMIN_PASSWORD_HASH'), 'Worker não recebe os secrets internos derivados.');
+    assert.ok(!workflow.includes('AUTH_SECRET: ${{ secrets.AUTH_SECRET }}'), 'Deploy sobrescreve AUTH_SECRET derivado com secret externo.');
+    assert.ok(!workflow.includes('ROBOT_KEY: ${{ secrets.ROBOT_KEY }}'), 'Deploy sobrescreve ROBOT_KEY derivado com secret externo.');
+    assert.ok(!workflow.includes('ADMIN_PASSWORD_HASH: ${{ secrets.ADMIN_PASSWORD_HASH }}'), 'Deploy sobrescreve hash derivado com secret externo.');
+  }
 });
 
 test('CSP permite somente a origem externa necessária para a foto temporária', async () => {
