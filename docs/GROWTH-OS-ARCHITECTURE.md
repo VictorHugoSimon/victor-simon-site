@@ -48,14 +48,23 @@ Score de 0 a 100 calculado por combinação ponderada de alcance, engajamento, a
 - Workers AI: geração editorial e visual
 - D1: dados estruturados, auditoria dos agentes, estados OAuth e credenciais sociais criptografadas
 - R2 `MEDIA`: imagens e demais ativos privados; binding só é ativado após provisionamento confirmado
-- Futuro: Queues para publicação assíncrona/retry
-- Cron Trigger diário implementado para fila de publicação + Radar + Estratégia + Analytics + Growth Coach
+- Cron Trigger diário: fila de publicação + Radar + Estratégia + Analytics + Growth Coach
+- Cloudflare Queues permanece evolução opcional para volumes maiores
+
+## Recursos por ambiente
+### STAGING
+- Pages: `victor-simon-site-staging`
+- Worker: `victor-simon-api-staging`
+- D1: `vhs-db-staging`
+- R2: `victor-simon-media-staging`
+
+### PRODUÇÃO
+- Pages: `victor-hugo-teixeira-simon`
+- Worker: `victor-simon-api`
+- D1: `vhs-db`
+- R2: `victor-simon-media`
 
 ## R2 e resiliência
-Os deploys definem buckets separados:
-- staging: `victor-simon-media-staging`
-- produção: `victor-simon-media`
-
 O bootstrap tenta consultar/criar o bucket. Se o token Cloudflare não possuir `Workers R2 Storage Write`, o deploy registra aviso, define `R2_READY=0` e segue sem binding `MEDIA`; site, CRM, blog e automação textual continuam funcionando. Quando o bucket é confirmado, `generate-wrangler-config.mjs` adiciona o binding automaticamente.
 
 ## OAuth social
@@ -68,7 +77,7 @@ O bootstrap tenta consultar/criar o bucket. Se o token Cloudflare não possuir `
 
 ### Instagram
 - Instagram Login para conta profissional;
-- escopos atuais `instagram_business_basic` e `instagram_business_content_publish`;
+- escopos `instagram_business_basic` e `instagram_business_content_publish`;
 - Graph API configurável por `META_API_VERSION`, padrão `v26.0`;
 - tenta trocar o token inicial por long-lived token e possui endpoint de refresh;
 - publicação exige conteúdo aprovado e imagem aprovada vinculada;
@@ -92,6 +101,7 @@ O bootstrap tenta consultar/criar o bucket. Se o token Cloudflare não possuir `
 - Imagens geradas entram como `review`.
 - Logs de agentes não devem armazenar secrets nem dados pessoais desnecessários.
 - Painel permanece `noindex` e autenticado.
+- Nenhum Secret, Worker, D1, Pages ou workflow de outro projeto pode ser reutilizado.
 
 ## Endpoints principais
 ### Editorial
@@ -108,6 +118,22 @@ O bootstrap tenta consultar/criar o bucket. Se o token Cloudflare não possuir `
 - `GET /api/growth/media/:id/file`
 - `PATCH /api/growth/media/:id`
 
+### Growth Loop
+- `POST /api/growth-loop/touch`
+- `POST /api/growth-loop/metrics`
+- `GET /api/growth-loop/summary`
+- `GET/POST /api/growth-loop/research`
+- `GET /api/growth-loop/cycles`
+- `POST /api/growth-loop/radar`
+- `POST /api/growth-loop/strategist`
+- `POST /api/growth-loop/analytics`
+- `POST /api/growth-loop/coach`
+- `POST /api/growth-loop/run`
+- `POST /api/growth-loop/robot/run`
+- `GET/POST /api/publication-jobs`
+- `POST /api/publication-jobs/run`
+- `POST /api/publication-jobs/:id/requeue`
+
 ### Social
 - `GET /api/social/status`
 - `POST /api/social/linkedin/connect`
@@ -118,7 +144,7 @@ O bootstrap tenta consultar/criar o bucket. Se o token Cloudflare não possuir `
 - `POST /api/social/instagram/publish`
 - `POST /api/social/instagram/refresh`
 - `POST /api/social/accounts/:id/disconnect`
-- `GET /api/social/media/:assetId` — URL temporária assinada para fetch da Meta
+- `GET /api/social/media/:assetId`
 
 ## Deploy social opcional
 Os deploys de STAGING/Produção aceitam, sem torná-los obrigatórios:
@@ -130,22 +156,30 @@ Os deploys de STAGING/Produção aceitam, sem torná-los obrigatórios:
 Se o par de um canal estiver completo, o pipeline grava os valores como Worker Secrets. Se estiver ausente, o deploy-base segue normalmente e o painel mostra o conector como não configurado.
 
 ## Gate de infraestrutura atual
-A engenharia da branch não depende de credenciais sociais para passar CI. Para o deploy real na Cloudflare, o pipeline agora exige apenas:
+Para o deploy real na Cloudflare, o único Secret obrigatório é:
 - `CLOUDFLARE_API_TOKEN`
-- `ADMIN_PASSWORD`
 
-`CLOUDFLARE_ACCOUNT_ID` tornou-se **opcional**. O bootstrap consulta as contas acessíveis pelo token e escolhe automaticamente quando existe uma única conta ou quando encontra inequivocamente os recursos do projeto. Se houver múltiplas contas indistinguíveis, pode-se informar `CLOUDFLARE_ACCOUNT_ID` ou `CLOUDFLARE_ACCOUNT_NAME` para desambiguar. Para a descoberta automática, o token precisa conseguir listar as contas acessíveis.
+Secrets opcionais:
+- `ADMIN_PASSWORD` — quando ausente, o deploy continua e uma senha aleatória descartável é usada apenas para gerar `ADMIN_PASSWORD_HASH`; o plaintext não é salvo nem exibido e o login administrativo permanece efetivamente bloqueado até novo deploy com senha configurada.
+- `CLOUDFLARE_ACCOUNT_ID` — opcional; o bootstrap consulta as contas acessíveis pelo token e tenta selecionar a conta de forma segura.
+- `CLOUDFLARE_ACCOUNT_NAME` — alternativa opcional para desambiguação quando necessário.
 
-Os últimos deploys reais de STAGING e produção, executados antes dessa melhoria, confirmaram que testes/builds passavam e paravam no gate de credenciais. O pipeline também foi corrigido para não sobrescrever `AUTH_SECRET`, `ROBOT_KEY` e `ADMIN_PASSWORD_HASH` derivados em runtime com GitHub Secrets vazios.
+O pipeline deriva `AUTH_SECRET` e `ROBOT_KEY` em runtime sem gravar os valores no Git. Também evita sobrescrever secrets internos derivados com entradas vazias.
 
-O conector GitHub disponível nesta sessão não expõe API de escrita de Secrets; portanto `CLOUDFLARE_API_TOKEN` e `ADMIN_PASSWORD` não podem ser criados por commit ou chamada do conector sem quebrar o modelo de segurança.
+## Estado operacional verificado em 26/08/2026
+- Growth Loop V1 integrado e testado.
+- Gate de deploy reduzido para um único Secret obrigatório.
+- `main` e `staging` são mantidos alinhados no mesmo release após promoção.
+- GitHub Actions de STAGING e PRODUÇÃO executaram o readiness check com `HAS_TOKEN: false`.
+- Por isso os jobs `Testar, migrar e publicar staging` e `Testar, migrar e publicar produção` foram corretamente pulados.
+- Nenhum recurso de outro projeto foi utilizado para contornar o gate.
 
-## Estado de validação
-A fundação anterior possui histórico de `CI` e `Growth OS CI` verdes. O head atual acrescentou OAuth social, publicação aprovada, migration `0004`, descoberta automática da conta Cloudflare e hardening do deploy. Ele precisa de nova execução dos dois CIs antes de promoção. As mutações realizadas pelo conector não estão disparando Actions automaticamente nesta sessão; por isso o gate de homologação real permanece o `Deploy STAGING` manual após os dois secrets base estarem disponíveis.
+Assim que `CLOUDFLARE_API_TOKEN` for cadastrado diretamente nos Environments `staging` e `production`, os workflows estão prontos para executar bootstrap, migrations `0001`–`0005`, Worker, Pages e smoke test. `ADMIN_PASSWORD` pode ser cadastrada depois para liberar o login administrativo.
 
-## Roadmap atualizado
-### Fundação — implementada na branch
-- Home V2 fiel ao protótipo
+## Estado da engenharia
+### Fundação — implementada
+- Home Clean V3/V3.1
+- SEO social e acessibilidade
 - painel Growth OS
 - schema D1 de conteúdo, mídia, campanhas, agentes e métricas
 - blog com leitura completa e fallback
@@ -158,20 +192,9 @@ A fundação anterior possui histórico de `CI` e `Growth OS CI` verdes. O head 
 - R2 privado opcional e resiliente
 - biblioteca de mídia no painel
 - OAuth state seguro e cofre criptografado de credenciais sociais
-- conector LinkedIn e publicação de texto aprovada
-- conector Instagram e publicação de imagem aprovada
-- workspace de conexão/publicação no painel
+- LinkedIn e Instagram preparados para publicação aprovada
 - descoberta automática de Account ID Cloudflare
 - deploy social opcional e não bloqueante
-
-### Próxima fase — homologação real
-1. disponibilizar `CLOUDFLARE_API_TOKEN` e `ADMIN_PASSWORD` no GitHub Actions
-2. executar CI/deploy de `staging`
-3. aplicar migrations `0003` e `0004`
-4. validar Home, Blog, painel, D1, Workers AI e R2
-5. registrar os apps oficiais LinkedIn/Instagram com os redirect URIs retornados pelo Worker STAGING
-6. disponibilizar os quatro secrets sociais
-7. conectar contas reais e fazer publicações de teste aprovadas
 
 ### Growth Loop V1 — implementado
 - fila D1 de publicação agendada com retry controlado e gate de aprovação
@@ -181,6 +204,16 @@ A fundação anterior possui histórico de `CI` e `Growth OS CI` verdes. O head 
 - Content Score 0–100
 - Radar, Estrategista, Pesquisador, Analytics e Growth Coach
 - painel de performance, atribuição e ciclos
+- cron diário
+
+### Ativação operacional pendente
+1. cadastrar `CLOUDFLARE_API_TOKEN` no Environment `staging`;
+2. executar/validar Deploy STAGING real;
+3. validar migration `0005`, Worker, Pages, Home, Blog e Painel;
+4. cadastrar o mesmo token próprio no Environment `production`;
+5. executar/validar Deploy PRODUCTION real;
+6. cadastrar `ADMIN_PASSWORD` quando o login administrativo precisar ser liberado;
+7. cadastrar credenciais OAuth sociais somente quando os apps oficiais estiverem autorizados.
 
 ### Evoluções dependentes de provedores
 - sincronização automática de métricas sociais conforme permissões concedidas
