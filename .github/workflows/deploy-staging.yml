@@ -50,17 +50,22 @@ jobs:
           node --input-type=module <<'NODE'
           import crypto from 'node:crypto';
           import fs from 'node:fs';
-          for (const key of ['CLOUDFLARE_API_TOKEN', 'ADMIN_PASSWORD']) {
-            if (!process.env[key]) throw new Error(`Secret ausente: ${key}`);
-          }
+          if (!process.env.CLOUDFLARE_API_TOKEN) throw new Error('Secret ausente: CLOUDFLARE_API_TOKEN');
           const derive = (label) => crypto
             .createHmac('sha256', process.env.CLOUDFLARE_API_TOKEN)
             .update(`victor-simon-site:${process.env.DEPLOY_ENVIRONMENT}:${label}`)
             .digest('hex');
+          const hasAdminPassword = Boolean(process.env.ADMIN_PASSWORD);
+          const effectiveAdminPassword = hasAdminPassword
+            ? process.env.ADMIN_PASSWORD
+            : crypto.randomBytes(48).toString('base64url');
+          if (!hasAdminPassword) {
+            console.log('::warning::ADMIN_PASSWORD ausente. STAGING seguirá com login administrativo efetivamente bloqueado até novo deploy com senha configurada.');
+          }
           const values = {
             AUTH_SECRET: derive('auth'),
             ROBOT_KEY: derive('robot'),
-            ADMIN_PASSWORD_HASH: crypto.createHash('sha256').update(process.env.ADMIN_PASSWORD).digest('hex')
+            ADMIN_PASSWORD_HASH: crypto.createHash('sha256').update(effectiveAdminPassword).digest('hex')
           };
           for (const [key, value] of Object.entries(values)) {
             console.log(`::add-mask::${value}`);
