@@ -16,14 +16,15 @@ Opcional:
 
 ## Pipeline esperado
 1. `npm run ci`;
-2. identificar conta Cloudflare;
-3. confirmar/criar D1, Pages e R2 opcional;
-4. aplicar migrations `0003_growth_os.sql` e `0004_social_oauth.sql`;
-5. publicar Worker com D1 + Workers AI + R2 quando disponível;
-6. aplicar secrets OAuth opcionais;
-7. build Pages `noindex`;
-8. publicar STAGING;
-9. smoke test.
+2. validar `CLOUDFLARE_API_TOKEN` e `ADMIN_PASSWORD`;
+3. identificar a conta Cloudflare automaticamente quando possível;
+4. confirmar/criar D1, Pages e R2 opcional;
+5. aplicar migrations `0003_growth_os.sql` e `0004_social_oauth.sql`;
+6. publicar Worker com D1 + Workers AI + R2 quando disponível;
+7. aplicar secrets OAuth opcionais;
+8. build Pages `noindex`;
+9. publicar STAGING;
+10. smoke test.
 
 ## Homologação funcional
 - Home V2;
