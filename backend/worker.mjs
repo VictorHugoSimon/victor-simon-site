@@ -12,6 +12,7 @@ import {
 } from './lib.mjs';
 import { buildDossier, qualifyLead } from './qualify.mjs';
 import { firstReply } from './chatbot.mjs';
+import { handleGrowthRoute } from './growth.mjs';
 
 const publicPostRoutes = new Set(['/api/leads', '/api/events']);
 
@@ -306,6 +307,8 @@ async function route(request, env) {
   const path = url.pathname.replace(/\/+$/, '') || '/';
 
   if (request.method === 'OPTIONS') return new Response(null, { status: 204 });
+  const growthResponse = await handleGrowthRoute(request, env);
+  if (growthResponse) return growthResponse;
   if (request.method === 'GET' && path === '/api/health') return health(env);
   if (request.method === 'POST' && path === '/api/auth/login') return login(request, env);
   if (request.method === 'POST' && path === '/api/leads') return createLead(request, env);
