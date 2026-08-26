@@ -9,25 +9,41 @@ on:
 permissions:
   contents: read
 
-# Verificação somente de presença; nenhum secret é exibido.
+# Somente presença; valores nunca são exibidos.
 jobs:
-  readiness:
+  cloudflare-token:
+    name: Cloudflare Token próprio
     if: ${{ github.event_name != 'pull_request' || github.head_ref == 'feature/growth-os-v2' }}
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Verificar credenciais sem expor valores
+      - name: Verificar token
         env:
-          HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
-          HAS_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
-          HAS_ADMIN: ${{ secrets.ADMIN_PASSWORD != '' }}
+          HAS_SECRET: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
         run: |
-          set -euo pipefail
-          echo "CLOUDFLARE_API_TOKEN=${HAS_TOKEN}"
-          echo "CLOUDFLARE_ACCOUNT_ID=${HAS_ACCOUNT}"
-          echo "ADMIN_PASSWORD=${HAS_ADMIN}"
-          if [ "$HAS_TOKEN" != 'true' ] || [ "$HAS_ADMIN" != 'true' ]; then
-            echo 'Perfil ainda não possui credenciais mínimas próprias de produção.' >&2
-            exit 1
-          fi
-          echo 'Perfil possui credenciais mínimas próprias de produção.'
+          [ "$HAS_SECRET" = 'true' ]
+
+  admin-password:
+    name: Admin Password próprio
+    if: ${{ github.event_name != 'pull_request' || github.head_ref == 'feature/growth-os-v2' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Verificar senha administrativa
+        env:
+          HAS_SECRET: ${{ secrets.ADMIN_PASSWORD != '' }}
+        run: |
+          [ "$HAS_SECRET" = 'true' ]
+
+  account-id:
+    name: Cloudflare Account ID opcional
+    if: ${{ github.event_name != 'pull_request' || github.head_ref == 'feature/growth-os-v2' }}
+    runs-on: ubuntu-latest
+    environment: production
+    continue-on-error: true
+    steps:
+      - name: Verificar Account ID
+        env:
+          HAS_SECRET: ${{ secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+        run: |
+          [ "$HAS_SECRET" = 'true' ]
