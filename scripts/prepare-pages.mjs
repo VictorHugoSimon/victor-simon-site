@@ -9,6 +9,8 @@ function arg(name, fallback) {
 const environment = arg('--environment', process.env.DEPLOY_ENVIRONMENT || 'staging');
 const outputName = arg('--out', 'dist');
 const apiBase = String(process.env.API_BASE || 'https://api.example.invalid').replace(/\/+$/, '');
+const siteBase = String(process.env.SITE_BASE || 'https://victor-hugo-teixeira-simon.pages.dev').replace(/\/+$/, '');
+const legacySiteBase = 'https://www.victorhugoteixeirasimon.com.br';
 if (!['staging', 'production'].includes(environment)) throw new Error('Ambiente inválido.');
 if (process.env.REQUIRE_API_BASE === '1' && apiBase.includes('example.invalid')) {
   throw new Error('API_BASE é obrigatória no deploy.');
@@ -28,7 +30,10 @@ await cp(source, output, { recursive: true });
 for (const file of ['index.html', 'blog.html', 'painel.html', 'assets/app.js', 'assets/blog.js', 'assets/panel.js']) {
   const path = resolve(output, file);
   let content = await readFile(path, 'utf8');
-  content = content.replaceAll('__API_BASE__', apiBase).replaceAll('__ENVIRONMENT__', environment);
+  content = content
+    .replaceAll('__API_BASE__', apiBase)
+    .replaceAll('__ENVIRONMENT__', environment)
+    .replaceAll(legacySiteBase, siteBase);
   await writeFile(path, content);
 }
 
@@ -39,4 +44,4 @@ if (environment === 'staging') {
   await writeFile(headersPath, `${headers.trim()}\n\n/*\n  X-Robots-Tag: noindex, nofollow, noarchive\n`);
 }
 
-console.log(`Site preparado em ${outputName} para ${environment}.`);
+console.log(`Site preparado em ${outputName} para ${environment} usando ${siteBase}.`);
