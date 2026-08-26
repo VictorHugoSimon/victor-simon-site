@@ -50,7 +50,7 @@ jobs:
           node --input-type=module <<'NODE'
           import crypto from 'node:crypto';
           import fs from 'node:fs';
-          for (const key of ['CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN', 'ADMIN_PASSWORD']) {
+          for (const key of ['CLOUDFLARE_API_TOKEN', 'ADMIN_PASSWORD']) {
             if (!process.env[key]) throw new Error(`Secret ausente: ${key}`);
           }
           const derive = (label) => crypto
@@ -76,7 +76,6 @@ jobs:
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: 4.124.0
           command: d1 migrations apply vhs-db --remote --config wrangler.generated.jsonc
       - name: Publicar API Worker
@@ -84,17 +83,12 @@ jobs:
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: 4.124.0
           command: deploy --config wrangler.generated.jsonc
           secrets: |
             AUTH_SECRET
             ROBOT_KEY
             ADMIN_PASSWORD_HASH
-        env:
-          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-          ROBOT_KEY: ${{ secrets.ROBOT_KEY }}
-          ADMIN_PASSWORD_HASH: ${{ secrets.ADMIN_PASSWORD_HASH }}
       - name: Configurar OAuth social opcional
         env:
           LINKEDIN_CLIENT_ID: ${{ secrets.LINKEDIN_CLIENT_ID }}
@@ -137,7 +131,6 @@ jobs:
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: 4.124.0
           command: pages deploy dist --project-name=victor-simon-site --branch=main
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
