@@ -1,0 +1,64 @@
+name: Clean Theme QA
+
+on:
+  push:
+    branches: [feature/clean-theme-v3]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  visual:
+    name: Build e evidências visuais clean
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Dependências e build
+        run: |
+          npm ci
+          npm run ci
+          npm run build:production
+      - name: Servir build local
+        run: |
+          python3 -m http.server 4173 --directory dist >/tmp/clean-theme-server.log 2>&1 &
+          echo $! > /tmp/clean-theme-server.pid
+          for i in {1..20}; do
+            curl -fsS http://127.0.0.1:4173/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/clean-theme-server.log
+          exit 1
+      - name: Instalar Chromium
+        run: npx --yes playwright@1.55.0 install --with-deps chromium
+      - name: Validar conteúdo público
+        run: |
+          curl -fsS http://127.0.0.1:4173/ -o /tmp/home.html
+          grep -Fq 'Clareza para decidir. Método para executar. Resultado para crescer.' /tmp/home.html
+          grep -Fq '/assets/profile-v2.css' /tmp/home.html
+          curl -fsS http://127.0.0.1:4173/blog.html -o /tmp/blog.html
+          grep -Fq '/assets/blog-clean.css' /tmp/blog.html
+          grep -Fq 'Gestão que funciona no mundo real.' /tmp/blog.html
+      - name: Capturar desktop e mobile
+        run: |
+          mkdir -p qa/clean
+          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='1440,1000' http://127.0.0.1:4173/ qa/clean/home-desktop.png
+          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='390,844' http://127.0.0.1:4173/ qa/clean/home-mobile.png
+          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='1440,1000' http://127.0.0.1:4173/blog.html qa/clean/blog-desktop.png
+          npx --yes playwright@1.55.0 screenshot --browser=chromium --full-page --viewport-size='390,844' http://127.0.0.1:4173/blog.html qa/clean/blog-mobile.png
+      - name: Publicar evidências
+        uses: actions/upload-artifact@v4
+        with:
+          name: clean-theme-v3-qa
+          path: qa/clean/*.png
+          if-no-files-found: error
+          retention-days: 7
