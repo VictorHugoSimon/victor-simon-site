@@ -18,6 +18,7 @@ if (!/^https:\/\//.test(process.env.CORS_ORIGIN)) {
 
 const defaultCron = environment === 'production' ? '17 11 * * *' : '47 11 * * *';
 const growthCron = process.env.GROWTH_CRON || defaultCron;
+const cronEnabled = environment === 'production' && process.env.DISABLE_GROWTH_CRON !== '1';
 
 const config = {
   $schema: 'https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json',
@@ -25,7 +26,7 @@ const config = {
   main: 'backend/worker-entry.mjs',
   compatibility_date: '2026-08-25',
   observability: { enabled: true, head_sampling_rate: environment === 'production' ? 0.25 : 1 },
-  triggers: { crons: [growthCron] },
+  ...(cronEnabled ? { triggers: { crons: [growthCron] } } : {}),
   vars: {
     ENVIRONMENT: environment,
     CORS_ORIGIN: process.env.CORS_ORIGIN,
@@ -50,4 +51,4 @@ if (process.env.R2_READY === '1' && process.env.R2_BUCKET_NAME) {
 
 const output = resolve(process.cwd(), 'wrangler.generated.jsonc');
 await writeFile(output, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
-console.log(`Configuração Wrangler gerada para ${environment} com D1, Workers AI, Growth Loop cron ${growthCron}, LinkedIn ${config.vars.LINKEDIN_API_VERSION}, Meta ${config.vars.META_API_VERSION}${config.r2_buckets ? ' e R2 MEDIA' : ''}.`);
+console.log(`Configuração Wrangler gerada para ${environment} com D1, Workers AI, Growth Loop cron ${cronEnabled ? growthCron : 'desativado'}, LinkedIn ${config.vars.LINKEDIN_API_VERSION}, Meta ${config.vars.META_API_VERSION}${config.r2_buckets ? ' e R2 MEDIA' : ''}.`);

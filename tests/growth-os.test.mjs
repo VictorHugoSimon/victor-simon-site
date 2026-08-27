@@ -126,7 +126,12 @@ test('Deploy descobre conta Cloudflare, preserva secrets e permite deploy técni
     assert.ok(workflow.includes("if (!process.env.CLOUDFLARE_API_TOKEN) throw new Error('Secret ausente: CLOUDFLARE_API_TOKEN')"), `${label} não exige o token Cloudflare.`);
     assert.ok(workflow.includes("crypto.randomBytes(48).toString('base64url')"), `${label} não bloqueia login com senha aleatória quando ADMIN_PASSWORD está ausente.`);
     assert.ok(!workflow.includes("['CLOUDFLARE_API_TOKEN', 'ADMIN_PASSWORD']"), `${label} voltou a exigir senha administrativa para infraestrutura.`);
-    assert.ok(workflow.includes('secrets: |\n            AUTH_SECRET\n            ROBOT_KEY\n            ADMIN_PASSWORD_HASH'), 'Worker não recebe os secrets internos derivados.');
+    const actionSecrets = workflow.includes('secrets: |\n            AUTH_SECRET\n            ROBOT_KEY\n            ADMIN_PASSWORD_HASH');
+    const explicitSecrets = workflow.includes("trap 'rm -f worker-secrets.json' EXIT")
+      && workflow.includes("fs.writeFileSync('worker-secrets.json', JSON.stringify(payload), { mode: 0o600 })")
+      && workflow.includes('npx wrangler@4.124.0 secret bulk worker-secrets.json --config wrangler.generated.jsonc')
+      && ['AUTH_SECRET', 'ROBOT_KEY', 'ADMIN_PASSWORD_HASH'].every((name) => workflow.includes(`${name}: process.env.${name}`));
+    assert.ok(actionSecrets || explicitSecrets, 'Worker não recebe os secrets internos derivados.');
     assert.ok(!workflow.includes('AUTH_SECRET: ${{ secrets.AUTH_SECRET }}'), 'Deploy sobrescreve AUTH_SECRET derivado com secret externo.');
     assert.ok(!workflow.includes('ROBOT_KEY: ${{ secrets.ROBOT_KEY }}'), 'Deploy sobrescreve ROBOT_KEY derivado com secret externo.');
     assert.ok(!workflow.includes('ADMIN_PASSWORD_HASH: ${{ secrets.ADMIN_PASSWORD_HASH }}'), 'Deploy sobrescreve hash derivado com secret externo.');

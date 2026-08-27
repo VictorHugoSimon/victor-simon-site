@@ -112,10 +112,23 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           wranglerVersion: 4.124.0
           command: deploy --config wrangler.generated.jsonc
-          secrets: |
-            AUTH_SECRET
-            ROBOT_KEY
-            ADMIN_PASSWORD_HASH
+      - name: Enviar secrets do Worker
+        run: |
+          set -euo pipefail
+          trap 'rm -f worker-secrets.json' EXIT
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const payload = {
+            AUTH_SECRET: process.env.AUTH_SECRET,
+            ROBOT_KEY: process.env.ROBOT_KEY,
+            ADMIN_PASSWORD_HASH: process.env.ADMIN_PASSWORD_HASH
+          };
+          for (const [key, value] of Object.entries(payload)) {
+            if (!value) throw new Error(`Secret interno ausente: ${key}`);
+          }
+          fs.writeFileSync('worker-secrets.json', JSON.stringify(payload), { mode: 0o600 });
+          NODE
+          npx wrangler@4.124.0 secret bulk worker-secrets.json --config wrangler.generated.jsonc
       - name: Configurar OAuth social opcional
         env:
           LINKEDIN_CLIENT_ID: ${{ secrets.LINKEDIN_CLIENT_ID }}
