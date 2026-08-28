@@ -66,6 +66,11 @@ function injectPublicExperience(content, file) {
   return content;
 }
 
+function isolateGrowthPanel(content, file) {
+  if (file !== 'index.html') return content;
+  return content.replace(/\s*<a class="panel-link" href="\/painel\.html"[^>]*>.*?<\/a>/, '');
+}
+
 function versionCleanAssets(content, file) {
   if (!['index.html', 'blog.html'].includes(file)) return content;
   return content
@@ -86,6 +91,7 @@ for (const file of ['index.html', 'blog.html', 'painel.html', 'assets/app.js', '
     .replaceAll('__ENVIRONMENT__', environment)
     .replaceAll(legacySiteBase, siteBase);
   content = injectPublicExperience(content, file);
+  content = isolateGrowthPanel(content, file);
   content = versionCleanAssets(content, file);
   if (file === 'painel.html') {
     const panelScripts = ['/assets/growth-automation-ui.js', '/assets/social-ui.js', '/assets/growth-loop-ui.js'];
