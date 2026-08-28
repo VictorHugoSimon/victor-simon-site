@@ -40,7 +40,7 @@ test('build de staging injeta API, canonical, experiência pública e bloqueia r
   assert.match(headers, /X-Robots-Tag: noindex/);
 });
 
-test('build de produção mantém indexação, SEO social e módulos de automação do painel', async () => {
+test('build de produção mantém indexação, SEO social, tema claro e módulos de automação do painel', async () => {
   await exec(process.execPath, ['scripts/prepare-pages.mjs', '--environment', 'production', '--out', 'dist-production'], {
     env: { ...process.env, API_BASE: 'https://api.example.com', SITE_BASE: 'https://victor-hugo-teixeira-simon.pages.dev', REQUIRE_API_BASE: '1' }
   });
@@ -54,7 +54,8 @@ test('build de produção mantém indexação, SEO social e módulos de automaç
   assert.ok(html.includes('https://victor-hugo-teixeira-simon.pages.dev'));
   assert.match(html, /property="og:url" content="https:\/\/victor-hugo-teixeira-simon\.pages\.dev\/"/);
   assert.match(blog, /property="og:url" content="https:\/\/victor-hugo-teixeira-simon\.pages\.dev\/blog\.html"/);
-  assert.match(html, /name="theme-color" content="#111827"/);
+  assert.match(html, /name="theme-color" content="#fbfbfc"/);
+  assert.match(html, /name="color-scheme" content="light"/);
   assert.ok(panel.includes('/assets/growth-automation-ui.js'));
   assert.ok(panel.includes('/assets/social-ui.js'));
 });
