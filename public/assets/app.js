@@ -1,4 +1,5 @@
 const API_BASE = document.querySelector('meta[name="api-base"]')?.content?.replace(/\/+$/, '') || '';
+const WHATSAPP_NUMBER = '5518991591228';
 const params = new URLSearchParams(location.search);
 let language = params.get('lang') === 'en' ? 'en' : 'pt';
 
@@ -119,6 +120,39 @@ track('page_view');
 trackAttributionTouch('page_view');
 
 const leadForm = document.querySelector('#leadForm');
+
+function whatsappLeadUrl(payload) {
+  const budgetSelect = leadForm?.querySelector('[name="budget"]');
+  const budget = budgetSelect?.selectedOptions?.[0]?.textContent?.trim() || '';
+  const value = (key) => String(payload[key] || '').trim();
+  const lines = language === 'en'
+    ? [
+        'Hello Victor! I sent a project request through your website.',
+        '',
+        `Name: ${value('name')}`,
+        `Email: ${value('email')}`,
+        value('company') && `Company: ${value('company')}`,
+        value('phone') && `Phone: ${value('phone')}`,
+        `Challenge: ${value('challenge')}`,
+        budget && `Investment range: ${budget}`,
+        value('deadline') && `Desired timeline: ${value('deadline')}`,
+        value('authority') && `Role in the decision: ${value('authority')}`
+      ]
+    : [
+        'Olá, Victor! Enviei uma solicitação de projeto pelo seu site.',
+        '',
+        `Nome: ${value('name')}`,
+        `E-mail: ${value('email')}`,
+        value('company') && `Empresa: ${value('company')}`,
+        value('phone') && `Telefone: ${value('phone')}`,
+        `Desafio: ${value('challenge')}`,
+        budget && `Faixa de investimento: ${budget}`,
+        value('deadline') && `Prazo desejado: ${value('deadline')}`,
+        value('authority') && `Papel na decisão: ${value('authority')}`
+      ];
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.filter(Boolean).join('\n'))}`;
+}
+
 leadForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   const status = document.querySelector('#formStatus');
@@ -127,8 +161,11 @@ leadForm?.addEventListener('submit', async (event) => {
   payload.language = language;
   payload.source = attribution.source || 'website';
   payload.sessionId = sessionId();
+  const whatsappUrl = whatsappLeadUrl(payload);
   status.className = 'form-status';
-  status.textContent = language === 'en' ? 'Sending securely…' : 'Enviando com segurança…';
+  status.textContent = language === 'en'
+    ? 'Registering your request and opening WhatsApp…'
+    : 'Registrando sua solicitação e abrindo o WhatsApp…';
   button.disabled = true;
   try {
     if (!API_BASE || API_BASE.includes('example.invalid')) throw new Error('API_NOT_CONFIGURED');
@@ -141,18 +178,18 @@ leadForm?.addEventListener('submit', async (event) => {
     if (!response.ok) throw new Error(`HTTP_${response.status}`);
     status.className = 'form-status success';
     status.textContent = language === 'en'
-      ? 'Context received. Our triage will direct the next step.'
-      : 'Contexto recebido. Nossa triagem direcionará o próximo passo.';
-    leadForm.reset();
+      ? 'Request registered. Review the message in WhatsApp and tap Send.'
+      : 'Solicitação registrada. Revise a mensagem no WhatsApp e toque em Enviar.';
     track('lead_submitted', { leadId: data.id || '' });
     trackAttributionTouch('lead_submitted');
   } catch {
-    status.className = 'form-status error';
+    status.className = 'form-status success';
     status.textContent = language === 'en'
-      ? 'We could not send it now. Please use the Code Solution WhatsApp button.'
-      : 'Não foi possível enviar agora. Use o botão de WhatsApp da Code Solution.';
+      ? 'Opening WhatsApp. Review the message and tap Send.'
+      : 'Abrindo o WhatsApp. Revise a mensagem e toque em Enviar.';
   } finally {
     button.disabled = false;
+    window.location.assign(whatsappUrl);
   }
 });
 
