@@ -12,6 +12,7 @@ const apiBase = String(process.env.API_BASE || 'https://api.example.invalid').re
 const siteBase = String(process.env.SITE_BASE || 'https://victor-hugo-teixeira-simon.pages.dev').replace(/\/+$/, '');
 const legacySiteBase = 'https://www.victorhugoteixeirasimon.com.br';
 const socialImage = 'https://avatars.githubusercontent.com/u/111150704?v=4';
+const cleanThemeVersion = 'clean-v3-20260828';
 if (!['staging', 'production'].includes(environment)) throw new Error('Ambiente inválido.');
 if (process.env.REQUIRE_API_BASE === '1' && apiBase.includes('example.invalid')) {
   throw new Error('API_BASE é obrigatória no deploy.');
@@ -64,6 +65,14 @@ function injectPublicExperience(content, file) {
   return content;
 }
 
+function versionCleanAssets(content, file) {
+  if (!['index.html', 'blog.html'].includes(file)) return content;
+  return content
+    .replaceAll('/assets/profile-v2.css"', `/assets/profile-v2.css?v=${cleanThemeVersion}"`)
+    .replaceAll('/assets/blog-clean.css"', `/assets/blog-clean.css?v=${cleanThemeVersion}"`)
+    .replaceAll('/assets/app.js"', `/assets/app.js?v=${cleanThemeVersion}"`);
+}
+
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await cp(source, output, { recursive: true });
@@ -76,6 +85,7 @@ for (const file of ['index.html', 'blog.html', 'painel.html', 'assets/app.js', '
     .replaceAll('__ENVIRONMENT__', environment)
     .replaceAll(legacySiteBase, siteBase);
   content = injectPublicExperience(content, file);
+  content = versionCleanAssets(content, file);
   if (file === 'painel.html') {
     const panelScripts = ['/assets/growth-automation-ui.js', '/assets/social-ui.js', '/assets/growth-loop-ui.js'];
     for (const scriptPath of panelScripts) {
