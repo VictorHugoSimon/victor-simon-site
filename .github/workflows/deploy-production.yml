@@ -50,6 +50,9 @@ jobs:
       R2_BUCKET_NAME: victor-simon-media
       PAGES_PROJECT_NAME: victor-hugo-teixeira-simon
       PAGES_PRODUCTION_BRANCH: main
+      # A conta está no plano Workers Free e já usa os 5 Cron Triggers permitidos.
+      # Mantém o Growth Loop disponível para execução manual sem bloquear o deploy.
+      DISABLE_GROWTH_CRON: '1'
       CORS_ORIGIN: https://victor-hugo-teixeira-simon.pages.dev,https://www.victorhugoteixeirasimon.com.br
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
