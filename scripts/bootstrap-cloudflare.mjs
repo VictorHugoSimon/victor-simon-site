@@ -92,15 +92,24 @@ if (!database) {
 
 const projectPath = `/pages/projects/${encodeURIComponent(pagesProjectName)}`;
 const project = await cloudflare(projectPath, { method: 'GET' }, [200, 404]);
+let pagesProject;
 if (project.status === 404) {
-  await cloudflare('/pages/projects', {
+  const created = await cloudflare('/pages/projects', {
     method: 'POST',
     body: JSON.stringify({ name: pagesProjectName, production_branch: productionBranch })
   });
+  pagesProject = created.data.result;
   console.log(`Pages criado: ${pagesProjectName}`);
 } else {
+  pagesProject = project.data.result;
   console.log(`Pages existente: ${pagesProjectName}`);
 }
+
+const pagesSubdomain = String(pagesProject?.subdomain || `${pagesProjectName}.pages.dev`)
+  .replace(/^https?:\/\//, '')
+  .replace(/\/+$/, '');
+const pagesCanonicalUrl = `https://${pagesSubdomain}`;
+console.log(`Domínio real do Pages: ${pagesCanonicalUrl}`);
 
 let r2Ready = false;
 if (r2BucketName) {
@@ -128,10 +137,16 @@ if (r2BucketName) {
 }
 
 if (!database?.uuid) throw new Error('Cloudflare não retornou o UUID do D1.');
+const existingOrigins = String(process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map((item) => item.trim())
+  .filter(Boolean);
+const corsOrigin = [...new Set([pagesCanonicalUrl, ...existingOrigins])].join(',');
 const values = {
   CLOUDFLARE_ACCOUNT_ID: accountId,
   D1_DATABASE_ID: database.uuid,
-  PAGES_CANONICAL_URL: `https://${pagesProjectName}.pages.dev`,
+  PAGES_CANONICAL_URL: pagesCanonicalUrl,
+  CORS_ORIGIN: corsOrigin,
   R2_READY: r2Ready ? '1' : '0'
 };
 if (r2Ready && r2BucketName) values.R2_BUCKET_NAME = r2BucketName;
