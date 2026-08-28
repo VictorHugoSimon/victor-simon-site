@@ -102,17 +102,97 @@ button{cursor:pointer}
 .experience-grid h3{font-size:1.14rem;margin-bottom:9px}
 .experience-grid p{color:var(--muted);font-size:.9rem}
 
-.gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-.gallery-card{border-radius:26px;background:#fff;border:1px solid var(--line);overflow:hidden}
-.gallery-visual{height:190px;background:#fff;display:grid;place-items:center;padding:32px;border-bottom:1px solid #e5e1da}
-.gallery-visual img{width:100%;height:100%;object-fit:contain;display:block}
-.case-copy{padding:24px 24px 26px}
-.case-copy h3{font-size:1.18rem;margin-bottom:8px}
-.case-copy p{color:var(--muted);font-size:.89rem;min-height:84px}
-.case-link{display:inline-flex;margin-top:15px;color:var(--teal);font-size:.82rem;font-weight:800}
-.case-link:hover{text-decoration:underline}
-#ifarm .hero-actions{margin-top:0}
-#ifarm .ifarm-brand-link{display:none!important}
+.gallery{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:18px;
+  align-items:stretch;
+}
+
+.gallery-card{
+  border-radius:26px;
+  background:#fff;
+  border:1px solid var(--line);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  height:100%;
+}
+
+.gallery-visual{
+  height:220px;
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:28px 24px;
+  border-bottom:1px solid #e5e1da;
+}
+
+.gallery-visual img{
+  display:block;
+  width:auto;
+  height:auto;
+  max-width:82%;
+  max-height:96px;
+  object-fit:contain;
+}
+
+.case-copy{
+  padding:24px 24px 26px;
+  display:flex;
+  flex-direction:column;
+  flex:1;
+}
+
+.case-copy h3{
+  font-size:1.18rem;
+  margin-bottom:10px;
+}
+
+.case-copy p{
+  color:var(--muted);
+  font-size:.89rem;
+  line-height:1.55;
+  min-height:108px;
+}
+
+.case-link{
+  display:inline-flex;
+  margin-top:auto;
+  padding-top:18px;
+  color:var(--teal);
+  font-size:.82rem;
+  font-weight:800;
+}
+
+.case-link:hover{
+  text-decoration:underline;
+}
+
+/* ajustes por logo */
+.visual-terra img{
+  max-width:245px;
+  max-height:78px;
+}
+
+.visual-code img{
+  max-width:150px;
+  max-height:150px;
+}
+
+.visual-ifarm img{
+  max-width:255px;
+  max-height:82px;
+}
+
+#ifarm .hero-actions{
+  margin-top:0;
+}
+
+#ifarm .ifarm-brand-link{
+  display:none!important;
+}
 
 .testimonial-shell{display:grid;grid-template-columns:.8fr 1.2fr;gap:70px;align-items:end;background:#e9efe9;border-radius:30px;padding:44px 48px}
 .testimonial-shell h2{margin-bottom:0}
@@ -180,7 +260,24 @@ button{cursor:pointer}
   .section{padding:68px 0}
   .section h2{font-size:clamp(1.9rem,10vw,2.65rem)}
   .card{padding:24px;min-height:auto}
-  .gallery-visual{height:160px}
+  .gallery-visual{
+    height:170px;
+    padding:22px 18px;
+  }
+
+  .gallery-visual img{
+    max-width:84%;
+    max-height:82px;
+  }
+
+  .visual-code img{
+    max-width:120px;
+    max-height:120px;
+  }
+
+  .case-copy p{
+    min-height:auto;
+  }
   .testimonial-shell{padding:30px 24px;border-radius:24px;gap:28px}
   .contact-box{padding:28px 22px;border-radius:24px}
   .form-grid{grid-template-columns:1fr}
