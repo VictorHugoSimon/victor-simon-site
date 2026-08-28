@@ -12,7 +12,7 @@ const apiBase = String(process.env.API_BASE || 'https://api.example.invalid').re
 const siteBase = String(process.env.SITE_BASE || 'https://victor-hugo-teixeira-simon.pages.dev').replace(/\/+$/, '');
 const legacySiteBase = 'https://www.victorhugoteixeirasimon.com.br';
 const socialImage = 'https://avatars.githubusercontent.com/u/111150704?v=4';
-const cleanThemeVersion = 'clean-light-v1-20260828';
+const cleanThemeVersion = 'reference-light-v2-20260828';
 if (!['staging', 'production'].includes(environment)) throw new Error('Ambiente inválido.');
 if (process.env.REQUIRE_API_BASE === '1' && apiBase.includes('example.invalid')) {
   throw new Error('API_BASE é obrigatória no deploy.');
@@ -49,7 +49,7 @@ function injectPublicExperience(content, file) {
     `<meta name="twitter:title" content="${title}">`,
     `<meta name="twitter:description" content="${description}">`,
     `<meta name="twitter:image" content="${socialImage}">`,
-    '<style>:root{color-scheme:light}.skip-link{position:fixed;left:16px;top:12px;z-index:9999;transform:translateY(-160%);background:#111827;color:#fff;padding:10px 14px;border-radius:10px;font:700 14px/1.2 Inter,system-ui,sans-serif;box-shadow:0 10px 30px rgba(17,24,39,.18)}.skip-link:focus{transform:translateY(0);outline:3px solid rgba(176,138,74,.45);outline-offset:2px}.section.dark,.section.green{background:#fff!important;color:var(--ink)!important;border-bottom:1px solid var(--line)!important}.section.green .eyebrow,.section.dark .eyebrow{color:#7a8290!important}.section.dark h2,.section.green h2,.section.dark h3,.section.green h3{color:var(--ink)!important}.section.dark p,.section.green p{color:var(--muted)!important}.ifarm-panel{border:1px solid var(--line)!important;background:var(--soft)!important}.metric{border-top:1px solid var(--line)!important}.metric strong{color:var(--ink)!important}.metric span{color:var(--muted)!important}.contact-box{background:#fff!important;color:var(--ink)!important;border:1px solid var(--line)!important;box-shadow:var(--shadow)!important}.contact-box h2{color:var(--ink)!important}.contact-box p{color:var(--muted)!important}.contact-box .eyebrow{color:#7a8290!important}.contact-box .btn.light{background:var(--ink)!important;color:#fff!important;border-color:var(--ink)!important}.field label{color:#475467!important}.field input,.field textarea,.field select{border:1px solid #d6dae0!important;background:#fff!important;color:var(--ink)!important}.field input:focus,.field textarea:focus,.field select:focus{border-color:#b08a4a!important;background:#fff!important}.blog-feature{background:#fff!important;color:var(--ink)!important;border:1px solid var(--line)!important}.blog-feature .eyebrow{color:#7a8290!important}.blog-feature h3{color:var(--ink)!important}</style>'
+    '<style>:root{color-scheme:light}.skip-link{position:fixed;left:16px;top:12px;z-index:9999;transform:translateY(-160%);background:#0b3f3e;color:#fff;padding:10px 14px;border-radius:10px;font:700 14px/1.2 Inter,system-ui,sans-serif;box-shadow:0 10px 30px rgba(11,63,62,.18)}.skip-link:focus{transform:translateY(0);outline:3px solid rgba(15,82,80,.28);outline-offset:2px}</style>'
   ].join('\n  ');
   if (!content.includes('property="og:title"')) {
     content = content.replace('</head>', `  ${meta}\n</head>`);
