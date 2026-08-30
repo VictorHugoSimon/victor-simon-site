@@ -142,4 +142,7 @@ function intakeBoot() {
 }
 
 document.addEventListener('DOMContentLoaded', intakeBoot);
+document.addEventListener('click', (event) => {
+  if (event.target.closest('[data-view="prospecting"]')) setTimeout(loadIntakeCampaigns, 80);
+});
 window.addEventListener('focus', () => { if (document.querySelector('[data-view-panel="prospecting"].active')) loadIntakeCampaigns(); });
