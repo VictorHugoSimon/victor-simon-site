@@ -1,4 +1,5 @@
 import { bearerToken, id, json, normalizeText, parseJson, verifyToken } from './lib.mjs';
+import { handleProspectingIntakeRoute } from './prospecting-intake.mjs';
 
 const STAGES = ['discovery', 'meeting', 'diagnosis', 'proposal', 'negotiation', 'won', 'lost'];
 const STAGE_PROBABILITY = { discovery: 20, meeting: 35, diagnosis: 45, proposal: 60, negotiation: 80, won: 100, lost: 0 };
@@ -239,6 +240,9 @@ async function opportunityHistory(request, env, opportunityId) {
 }
 
 export async function handleSalesClosingRoute(request, env) {
+  const intake = await handleProspectingIntakeRoute(request, env);
+  if (intake) return intake;
+
   const path = new URL(request.url).pathname.replace(/\/+$/, '') || '/';
   if (!path.startsWith('/api/sales')) return null;
   if (request.method === 'GET' && path === '/api/sales/proposals') return listProposals(request, env);

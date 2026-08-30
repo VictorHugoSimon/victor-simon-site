@@ -94,7 +94,7 @@ for (const file of ['index.html', 'blog.html', 'painel.html', 'assets/app.js', '
   content = isolateGrowthPanel(content, file);
   content = versionCleanAssets(content, file);
   if (file === 'painel.html') {
-    const panelScripts = ['/assets/growth-automation-ui.js', '/assets/social-ui.js', '/assets/growth-loop-ui.js'];
+    const panelScripts = ['/assets/growth-automation-ui.js', '/assets/social-ui.js', '/assets/growth-loop-ui.js', '/assets/prospecting-intake-ui.js'];
     for (const scriptPath of panelScripts) {
       if (!content.includes(scriptPath)) {
         content = content.replace('</body>', `  <script type="module" src="${scriptPath}"></script>\n</body>`);
