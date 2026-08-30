@@ -1,4 +1,5 @@
 import { bearerToken, id, json, normalizeText, parseJson, verifyToken } from './lib.mjs';
+import { handleSalesClosingRoute } from './sales-closing.mjs';
 
 const AGENTS = [
   ['icp-planner', 'ICP Planner', 'Define segmento, oferta e critérios de aderência.'],
@@ -245,6 +246,9 @@ async function agents(request, env) {
 }
 
 export async function handleProspectingRoute(request, env) {
+  const salesClosing = await handleSalesClosingRoute(request, env);
+  if (salesClosing) return salesClosing;
+
   const path = new URL(request.url).pathname.replace(/\/+$/, '') || '/';
   if (!path.startsWith('/api/prospecting')) return null;
   if (request.method === 'GET' && path === '/api/prospecting/summary') return summary(request, env);
