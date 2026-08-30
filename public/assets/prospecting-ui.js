@@ -1,6 +1,7 @@
 const API_BASE = document.querySelector('meta[name="api-base"]')?.content?.replace(/\/+$/, '') || '';
 const TOKEN_KEY = 'vs_admin_token';
 let draftsCache = [];
+let proposalsCache = [];
 
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char])); }
 function countGroups(rows = []) { return rows.reduce((sum, row) => sum + Number(row.total || 0), 0); }
@@ -26,18 +27,23 @@ function get(path) { return request(path); }
 function sendJson(path, method, body = {}) { return request(path, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
 function kpi(label, value, note) { return `<article class="growth-kpi"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(note)}</small></article>`; }
 
+function stageOptions(current) {
+  const labels = { discovery: 'Discovery', meeting: 'Reunião', diagnosis: 'Diagnóstico', proposal: 'Proposta', negotiation: 'Negociação', won: 'Ganho', lost: 'Perdido' };
+  return Object.entries(labels).map(([value, label]) => `<option value="${value}" ${value === current ? 'selected' : ''}>${label}</option>`).join('');
+}
+
 function ensureSalesMachineWorkspace() {
   const view = document.querySelector('[data-view-panel="prospecting"]');
   if (!view || document.querySelector('#salesPipelineSection')) return;
   view.insertAdjacentHTML('beforeend', `
     <section class="growth-panel" id="salesPipelineSection">
       <div class="growth-panel-head">
-        <div><h2>Pipeline Comercial</h2><p>Leads quentes transformados em oportunidades com valor, probabilidade e próxima ação.</p></div>
-        <span class="growth-badge status ready">Máquina Comercial V1</span>
+        <div><h2>Pipeline Comercial</h2><p>Leads quentes transformados em oportunidades com valor, probabilidade, próxima ação e etapa de fechamento.</p></div>
+        <span class="growth-badge status ready">Máquina Comercial V1.1</span>
       </div>
       <div class="table-wrap">
         <table class="growth-table">
-          <thead><tr><th>Oportunidade</th><th>Oferta</th><th>Score</th><th>Valor</th><th>Prob.</th><th>Etapa</th><th>Próxima ação</th></tr></thead>
+          <thead><tr><th>Oportunidade</th><th>Oferta</th><th>Score</th><th>Valor</th><th>Prob.</th><th>Etapa</th><th>Próxima ação</th><th>Ações</th></tr></thead>
           <tbody id="salesPipelineRows"></tbody>
         </table>
         <div class="growth-empty" id="salesPipelineEmpty">Carregando pipeline...</div>
@@ -49,6 +55,26 @@ function ensureSalesMachineWorkspace() {
         <span class="growth-badge status pending">aprovação humana obrigatória</span>
       </div>
       <div id="salesDrafts" class="growth-empty">Carregando abordagens...</div>
+    </section>
+    <section class="growth-panel" id="salesProposalsSection">
+      <div class="growth-panel-head">
+        <div><h2>Propostas Comerciais</h2><p>Rascunhos versionados, valor, condições e aceite acompanhados dentro do pipeline.</p></div>
+        <span class="growth-badge">revisão antes do compartilhamento</span>
+      </div>
+      <div id="salesProposals" class="growth-empty">Carregando propostas...</div>
+    </section>
+    <section class="growth-panel" id="salesFollowupsSection">
+      <div class="growth-panel-head">
+        <div><h2>Follow-ups</h2><p>Cadência interna programada para você saber exatamente quem precisa de atenção e quando.</p></div>
+        <span class="growth-badge status ready">sem envio autônomo</span>
+      </div>
+      <div class="table-wrap">
+        <table class="growth-table">
+          <thead><tr><th>Lead</th><th>#</th><th>Canal</th><th>Objetivo</th><th>Data</th><th>Status</th><th>Ação</th></tr></thead>
+          <tbody id="salesFollowupRows"></tbody>
+        </table>
+        <div class="growth-empty" id="salesFollowupsEmpty">Carregando follow-ups...</div>
+      </div>
     </section>
   `);
   if (!view.dataset.salesMachineBound) {
@@ -67,8 +93,13 @@ function renderPipeline(rows) {
     <td><span class="growth-badge status ready">${Number(item.score || 0)}</span></td>
     <td>${money(item.estimated_value)}</td>
     <td>${Number(item.probability || 0)}%</td>
-    <td><span class="growth-badge">${escapeHtml(item.stage)}</span></td>
+    <td><select data-stage-select="${escapeHtml(item.id)}" class="growth-btn">${stageOptions(item.stage)}</select></td>
     <td>${escapeHtml(item.next_action || '—')}<br><span class="muted">${shortDate(item.next_action_due_at)}</span></td>
+    <td><div class="growth-actions" style="gap:6px;min-width:260px">
+      <button class="growth-btn" data-save-opportunity="${escapeHtml(item.id)}" type="button">Salvar etapa</button>
+      <button class="growth-btn primary" data-create-proposal="${escapeHtml(item.id)}" data-value="${Number(item.estimated_value || 0)}" type="button">Proposta</button>
+      <button class="growth-btn" data-create-followups="${escapeHtml(item.id)}" type="button">Follow-up</button>
+    </div></td>
   </tr>`).join('');
   empty.style.display = rows.length ? 'none' : 'block';
   if (!rows.length) empty.textContent = 'Nenhuma oportunidade aberta. Use “Criar oportunidade” em um lead quente.';
@@ -106,18 +137,66 @@ function renderDrafts(rows) {
   target.innerHTML = rows.map(draftCard).join('');
 }
 
+function proposalActions(proposal) {
+  if (proposal.status === 'draft') return `<button class="growth-btn primary" data-proposal-status="approved" data-proposal-id="${escapeHtml(proposal.id)}" type="button">Aprovar</button>`;
+  if (proposal.status === 'approved') return `<button class="growth-btn primary" data-copy-proposal="${escapeHtml(proposal.id)}" type="button">Copiar proposta</button><button class="growth-btn" data-proposal-status="shared" data-proposal-id="${escapeHtml(proposal.id)}" type="button">Marcar compartilhada</button>`;
+  if (proposal.status === 'shared') return `<button class="growth-btn" data-copy-proposal="${escapeHtml(proposal.id)}" type="button">Copiar</button><button class="growth-btn primary" data-proposal-status="accepted" data-proposal-id="${escapeHtml(proposal.id)}" type="button">Aceita / Fechar</button><button class="growth-btn" data-proposal-status="rejected" data-proposal-id="${escapeHtml(proposal.id)}" type="button">Recusada</button>`;
+  if (proposal.status === 'rejected') return `<button class="growth-btn" data-proposal-status="draft" data-proposal-id="${escapeHtml(proposal.id)}" type="button">Reabrir</button>`;
+  return `<button class="growth-btn" data-copy-proposal="${escapeHtml(proposal.id)}" type="button">Copiar proposta</button>`;
+}
+
+function renderProposals(rows) {
+  proposalsCache = rows;
+  const target = document.querySelector('#salesProposals');
+  if (!target) return;
+  if (!rows.length) {
+    target.className = 'growth-empty';
+    target.textContent = 'Nenhuma proposta criada. Gere uma diretamente no Pipeline Comercial.';
+    return;
+  }
+  target.className = 'channel-grid';
+  target.innerHTML = rows.map((proposal) => `<article class="channel-card">
+    <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div><strong>${escapeHtml(proposal.title)}</strong><span>${escapeHtml(proposal.account_name || proposal.contact_name || '—')} · v${Number(proposal.version || 1)}</span></div>
+      <span class="status ${['approved', 'shared', 'accepted'].includes(proposal.status) ? 'ready' : 'pending'}">${escapeHtml(proposal.status)}</span>
+    </div>
+    <strong style="font-size:1.25rem;margin-top:10px">${money(proposal.value)}</strong>
+    <p style="white-space:pre-wrap;max-height:260px;overflow:auto;margin-top:10px;color:#475467;font-size:.82rem">${escapeHtml(proposal.content)}</p>
+    <div class="growth-actions" style="margin-top:12px">${proposalActions(proposal)}</div>
+  </article>`).join('');
+}
+
+function renderFollowups(rows) {
+  const body = document.querySelector('#salesFollowupRows');
+  const empty = document.querySelector('#salesFollowupsEmpty');
+  if (!body || !empty) return;
+  body.innerHTML = rows.map((item) => `<tr>
+    <td><strong>${escapeHtml(item.contact_name)}</strong><br><span class="muted">${escapeHtml(item.account_name || '—')}</span></td>
+    <td>${Number(item.sequence_no || 0)}</td>
+    <td>${escapeHtml(item.channel)}</td>
+    <td>${escapeHtml(item.objective)}</td>
+    <td>${shortDate(item.due_at)}</td>
+    <td><span class="growth-badge ${item.status === 'completed' ? 'status ready' : ''}">${escapeHtml(item.status)}</span></td>
+    <td>${item.status === 'planned' ? `<div class="growth-actions" style="gap:6px"><button class="growth-btn primary" data-followup-status="completed" data-followup-id="${escapeHtml(item.id)}" type="button">Concluir</button><button class="growth-btn" data-followup-status="skipped" data-followup-id="${escapeHtml(item.id)}" type="button">Pular</button></div>` : '—'}</td>
+  </tr>`).join('');
+  empty.style.display = rows.length ? 'none' : 'block';
+  if (!rows.length) empty.textContent = 'Nenhuma cadência criada para as oportunidades.';
+}
+
 async function loadProspectingWorkspace() {
   const kpis = document.querySelector('#prospectingKpis');
   if (!kpis || !sessionStorage.getItem(TOKEN_KEY)) return;
   ensureSalesMachineWorkspace();
   try {
-    const [summary, agents, hot, accounts, pipeline, drafts] = await Promise.all([
+    const [summary, agents, hot, accounts, pipeline, drafts, proposals, followups] = await Promise.all([
       get('/api/prospecting/summary'),
       get('/api/prospecting/agents'),
       get('/api/prospecting/hot-leads'),
       get('/api/prospecting/accounts'),
       get('/api/prospecting/opportunities'),
-      get('/api/prospecting/drafts')
+      get('/api/prospecting/drafts'),
+      get('/api/sales/proposals'),
+      get('/api/sales/followups')
     ]);
     kpis.innerHTML = [
       kpi('Empresas-alvo', countGroups(summary.accounts), 'pipeline ICP'),
@@ -158,6 +237,8 @@ async function loadProspectingWorkspace() {
 
     renderPipeline(pipeline.opportunities || []);
     renderDrafts(drafts.drafts || []);
+    renderProposals(proposals.proposals || []);
+    renderFollowups(followups.followups || []);
   } catch (error) {
     kpis.innerHTML = kpi('Prospecção', 'Pendente', error.message === 'HTTP_500' ? 'aplicar migrations do CRM' : 'API indisponível');
   }
@@ -197,6 +278,50 @@ async function handleSalesAction(event) {
     return;
   }
 
+  const saveOpportunity = event.target.closest('[data-save-opportunity]');
+  if (saveOpportunity) {
+    const opportunityId = saveOpportunity.dataset.saveOpportunity;
+    const stage = document.querySelector(`[data-stage-select="${CSS.escape(opportunityId)}"]`)?.value;
+    if (!stage) return;
+    saveOpportunity.disabled = true;
+    try {
+      const nextAction = ['won', 'lost'].includes(stage) ? undefined : window.prompt('Próxima ação comercial:', 'Acompanhar avanço e registrar retorno');
+      await sendJson(`/api/sales/opportunities/${opportunityId}`, 'PATCH', { stage, ...(nextAction ? { nextAction } : {}) });
+      await loadProspectingWorkspace();
+    } catch (error) {
+      window.alert(`Não foi possível atualizar a oportunidade: ${error.message}`);
+    } finally { saveOpportunity.disabled = false; }
+    return;
+  }
+
+  const createProposal = event.target.closest('[data-create-proposal]');
+  if (createProposal) {
+    const raw = window.prompt('Valor da proposta em reais:', String(Number(createProposal.dataset.value || 0) || 15000));
+    if (raw === null) return;
+    createProposal.disabled = true;
+    try {
+      await sendJson(`/api/sales/opportunities/${createProposal.dataset.createProposal}/proposals`, 'POST', { value: parseMoneyInput(raw) });
+      await loadProspectingWorkspace();
+      document.querySelector('#salesProposalsSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (error) {
+      window.alert(`Não foi possível gerar a proposta: ${error.message}`);
+    } finally { createProposal.disabled = false; }
+    return;
+  }
+
+  const createFollowups = event.target.closest('[data-create-followups]');
+  if (createFollowups) {
+    createFollowups.disabled = true;
+    try {
+      await sendJson(`/api/sales/opportunities/${createFollowups.dataset.createFollowups}/followups`, 'POST', {});
+      await loadProspectingWorkspace();
+      document.querySelector('#salesFollowupsSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (error) {
+      window.alert(`Não foi possível criar a cadência: ${error.message}`);
+    } finally { createFollowups.disabled = false; }
+    return;
+  }
+
   const statusButton = event.target.closest('[data-draft-status][data-draft-id]');
   if (statusButton) {
     statusButton.disabled = true;
@@ -206,6 +331,33 @@ async function handleSalesAction(event) {
     } catch (error) {
       window.alert(`Não foi possível atualizar a abordagem: ${error.message}`);
     } finally { statusButton.disabled = false; }
+    return;
+  }
+
+  const proposalStatus = event.target.closest('[data-proposal-status][data-proposal-id]');
+  if (proposalStatus) {
+    const nextStatus = proposalStatus.dataset.proposalStatus;
+    if (nextStatus === 'shared' && !window.confirm('Confirma que você compartilhou esta proposta manualmente com o cliente?')) return;
+    if (nextStatus === 'accepted' && !window.confirm('Confirma o aceite comercial e o fechamento desta oportunidade?')) return;
+    proposalStatus.disabled = true;
+    try {
+      await sendJson(`/api/sales/proposals/${proposalStatus.dataset.proposalId}`, 'PATCH', { status: nextStatus });
+      await loadProspectingWorkspace();
+    } catch (error) {
+      window.alert(`Não foi possível atualizar a proposta: ${error.message}`);
+    } finally { proposalStatus.disabled = false; }
+    return;
+  }
+
+  const followupStatus = event.target.closest('[data-followup-status][data-followup-id]');
+  if (followupStatus) {
+    followupStatus.disabled = true;
+    try {
+      await sendJson(`/api/sales/followups/${followupStatus.dataset.followupId}`, 'PATCH', { status: followupStatus.dataset.followupStatus });
+      await loadProspectingWorkspace();
+    } catch (error) {
+      window.alert(`Não foi possível atualizar o follow-up: ${error.message}`);
+    } finally { followupStatus.disabled = false; }
     return;
   }
 
@@ -221,6 +373,21 @@ async function handleSalesAction(event) {
       setTimeout(() => { copyButton.textContent = original; }, 1400);
     } catch {
       window.prompt('Copie a abordagem aprovada:', text);
+    }
+    return;
+  }
+
+  const copyProposal = event.target.closest('[data-copy-proposal]');
+  if (copyProposal) {
+    const proposal = proposalsCache.find((item) => item.id === copyProposal.dataset.copyProposal);
+    if (!proposal || !['approved', 'shared', 'accepted'].includes(proposal.status)) return;
+    try {
+      await navigator.clipboard.writeText(proposal.content);
+      const original = copyProposal.textContent;
+      copyProposal.textContent = 'Proposta copiada';
+      setTimeout(() => { copyProposal.textContent = original; }, 1400);
+    } catch {
+      window.prompt('Copie a proposta aprovada:', proposal.content);
     }
   }
 }
