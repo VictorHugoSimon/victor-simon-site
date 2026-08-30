@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /painel.html
 
-Sitemap: https://www.victorhugoteixeirasimon.com.br/sitemap.xml
+Sitemap: https://victor-hugo-teixeira-simon.pages.dev/sitemap.xml
