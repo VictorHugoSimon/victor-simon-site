@@ -143,6 +143,8 @@ function whatsappLeadUrl(payload) {
   const budgetSelect = leadForm?.querySelector('[name="budget"]');
   const budget = budgetSelect?.selectedOptions?.[0]?.textContent?.trim() || '';
   const value = (key) => String(payload[key] || '').trim();
+  const serviceSelect = leadForm?.querySelector('[name="serviceInterest"]');
+  const service = serviceSelect?.selectedOptions?.[0]?.textContent?.trim() || '';
   const lines = language === 'en'
     ? [
         'Hello Victor! I sent a project request through your website.',
@@ -151,6 +153,7 @@ function whatsappLeadUrl(payload) {
         `Email: ${value('email')}`,
         value('company') && `Company: ${value('company')}`,
         value('phone') && `Phone: ${value('phone')}`,
+        service && `Solution: ${service}`,
         `Challenge: ${value('challenge')}`,
         budget && `Investment range: ${budget}`,
         value('deadline') && `Desired timeline: ${value('deadline')}`,
@@ -163,6 +166,7 @@ function whatsappLeadUrl(payload) {
         `E-mail: ${value('email')}`,
         value('company') && `Empresa: ${value('company')}`,
         value('phone') && `Telefone: ${value('phone')}`,
+        service && `Solução: ${service}`,
         `Desafio: ${value('challenge')}`,
         budget && `Faixa de investimento: ${budget}`,
         value('deadline') && `Prazo desejado: ${value('deadline')}`,
@@ -173,6 +177,7 @@ function whatsappLeadUrl(payload) {
 
 leadForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
+  if (!leadForm.checkValidity()) { leadForm.reportValidity(); return; }
   const status = document.querySelector('#formStatus');
   const button = leadForm.querySelector('button[type="submit"]');
   const payload = Object.fromEntries(new FormData(leadForm).entries());
@@ -211,11 +216,26 @@ leadForm?.addEventListener('submit', async (event) => {
   }
 });
 
-document.querySelector('#newsletterForm')?.addEventListener('submit', (event) => {
+document.querySelectorAll('[data-service-select]').forEach((link) => link.addEventListener('click', () => {
+  const select = document.querySelector('#serviceInterest');
+  if (select) select.value = link.dataset.serviceSelect;
+}));
+
+document.querySelector('#newsletterForm')?.addEventListener('submit', async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
   const email = new FormData(form).get('email');
+  const status = document.querySelector('#newsletterStatus');
+  status.className = 'form-status';
+  status.textContent = language === 'en' ? 'Registering…' : 'Registrando…';
   track('newsletter_interest', { emailDomain: String(email).split('@')[1] || '' });
-  form.reset();
-  alert(language === 'en' ? 'Interest registered. Thank you.' : 'Interesse registrado. Obrigado.');
+  try {
+    const response = await fetch(`${API_BASE}/api/newsletter`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, language, source: attribution.source || 'website' }) });
+    if (!response.ok) throw new Error(`HTTP_${response.status}`);
+    form.reset(); status.className = 'form-status success';
+    status.textContent = language === 'en' ? 'Subscription confirmed.' : 'Inscrição confirmada.';
+  } catch {
+    status.className = 'form-status error';
+    status.textContent = language === 'en' ? 'Could not subscribe right now.' : 'Não foi possível concluir a inscrição agora.';
+  }
 });

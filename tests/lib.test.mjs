@@ -5,7 +5,7 @@ import { createToken, normalizeEmail, sha256, validateLead, verifyToken } from '
 test('normaliza e-mail', () => assert.equal(normalizeEmail('  VICTOR@EXAMPLE.COM '), 'victor@example.com'));
 
 test('valida lead completo', () => {
-  const result = validateLead({ name: 'Victor', email: 'v@example.com', challenge: 'Precisamos organizar o portfólio de projetos.' });
+  const result = validateLead({ name: 'Victor', email: 'v@example.com', challenge: 'Precisamos organizar o portfólio de projetos.', contactConsent: 'yes' });
   assert.equal(result.valid, true);
   assert.equal(result.lead.language, 'pt');
 });
@@ -13,7 +13,7 @@ test('valida lead completo', () => {
 test('rejeita lead inválido', () => {
   const result = validateLead({ name: 'V', email: 'invalido', challenge: 'curto' });
   assert.equal(result.valid, false);
-  assert.deepEqual(result.errors, ['name', 'email', 'challenge']);
+  assert.deepEqual(result.errors, ['name', 'email', 'challenge', 'contactConsent']);
 });
 
 test('gera SHA-256 estável', async () => {

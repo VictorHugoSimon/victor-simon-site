@@ -13,6 +13,7 @@ export function qualifyLead(lead = {}) {
   const budget = String(lead.budget || '').toLowerCase();
   const deadline = String(lead.deadline || '').toLowerCase();
   const authority = String(lead.authority || '').toLowerCase();
+  const serviceInterest = String(lead.serviceInterest || '').toLowerCase();
 
   if (challenge.length >= 80) { score += 25; reasons.push('Problema descrito com clareza'); }
   else if (challenge.length >= 25) { score += 15; reasons.push('Problema identificado'); }
@@ -34,6 +35,10 @@ export function qualifyLead(lead = {}) {
 
   if (lead.company) score += 6;
   if (lead.phone) score += 4;
+  if (['diagnostico-executivo', 'sprint-produto-delivery', 'automacao-dados-ia'].includes(serviceInterest)) {
+    score += 5;
+    reasons.push('Solução de interesse definida');
+  }
 
   score = Math.min(100, score);
   return {
@@ -51,6 +56,7 @@ export function buildDossier(lead, qualification) {
     reasons: qualification.reasons,
     budget: lead.budget || 'não informado',
     deadline: lead.deadline || 'não informado',
+    serviceInterest: lead.serviceInterest || 'não informado',
     recommendedAction: qualification.ready
       ? 'Contato humano em até um dia útil com proposta de diagnóstico.'
       : 'Manter na régua automática de conteúdo e requalificar.'

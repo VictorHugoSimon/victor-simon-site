@@ -17,7 +17,7 @@ import { handleGrowthAutomationRoute } from './growth-automation.mjs';
 import { handleSocialRoute } from './social.mjs';
 import { handleProspectingRoute } from './prospecting.mjs';
 
-const publicPostRoutes = new Set(['/api/leads', '/api/events']);
+const publicPostRoutes = new Set(['/api/leads', '/api/events', '/api/newsletter']);
 
 function allowedOrigin(request, env) {
   const origin = request.headers.get('Origin') || '';
@@ -102,8 +102,8 @@ async function createLead(request, env) {
   await env.DB.prepare(`
     INSERT INTO leads (
       id, name, email, phone, company, role, challenge, budget, deadline, authority,
-      source, language, score, stage, dossier_json
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      source, language, score, stage, dossier_json, service_interest, preferred_contact, contact_consent
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     leadId,
     validation.lead.name,
@@ -119,14 +119,43 @@ async function createLead(request, env) {
     validation.lead.language,
     qualification.score,
     qualification.nextStage,
-    JSON.stringify(dossier)
+    JSON.stringify(dossier),
+    validation.lead.serviceInterest,
+    validation.lead.preferredContact,
+    validation.lead.contactConsent ? 1 : 0
   ).run();
   await env.DB.prepare(`
     INSERT INTO lead_stage_history (id, lead_id, from_stage, to_stage, note)
     VALUES (?, ?, NULL, ?, ?)
   `).bind(id('history'), leadId, qualification.nextStage, 'Cadastro e qualificação automática').run();
 
+  const nextAction = qualification.ready
+    ? 'Revisar dossiê e realizar contato humano em até um dia útil.'
+    : 'Enviar conteúdo relacionado e requalificar conforme novos sinais.';
+  await env.DB.prepare(`
+    INSERT INTO lead_recommendations (id, lead_id, offer_id, next_action, priority, due_at, metadata_json)
+    VALUES (?, ?, ?, ?, ?, datetime('now', ?), ?)
+  `).bind(
+    id('recommendation'), leadId, validation.lead.serviceInterest || null, nextAction,
+    qualification.ready ? qualification.score : Math.max(30, qualification.score),
+    qualification.ready ? '+1 day' : '+7 days',
+    JSON.stringify({ ready: qualification.ready, preferredContact: validation.lead.preferredContact })
+  ).run();
+
   return json({ id: leadId, score: qualification.score, stage: qualification.nextStage, ready: qualification.ready }, { status: 201 });
+}
+
+async function subscribeNewsletter(request, env) {
+  if (!(await rateLimit(request, env, 12, 600))) return json({ error: 'rate_limited' }, { status: 429 });
+  const body = await parseJson(request, 4_000);
+  const email = String(body.email || '').trim().toLowerCase().slice(0, 254);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: 'invalid_email' }, { status: 422 });
+  await env.DB.prepare(`
+    INSERT INTO newsletter_subscribers (id, email, language, source, status)
+    VALUES (?, ?, ?, ?, 'active')
+    ON CONFLICT(email) DO UPDATE SET language=excluded.language, source=excluded.source, status='active', updated_at=CURRENT_TIMESTAMP
+  `).bind(id('subscriber'), email, body.language === 'en' ? 'en' : 'pt', normalizeText(body.source || 'website', 80)).run();
+  return json({ subscribed: true }, { status: 201 });
 }
 
 async function listLeads(request, env) {
@@ -240,7 +269,7 @@ async function seoKeywords(env) {
 async function readyLeads(request, env) {
   if (!(await isAdmin(request, env))) return json({ error: 'unauthorized' }, { status: 401 });
   const result = await env.DB.prepare(`
-    SELECT id, name, email, phone, company, challenge, score, stage, dossier_json, created_at
+    SELECT id, name, email, phone, company, challenge, service_interest, preferred_contact, score, stage, dossier_json, created_at
     FROM leads WHERE score >= 70 AND stage NOT IN ('won', 'lost')
     ORDER BY score DESC, created_at DESC LIMIT 100
   `).all();
@@ -322,6 +351,7 @@ async function route(request, env) {
   if (request.method === 'GET' && path === '/api/health') return health(env);
   if (request.method === 'POST' && path === '/api/auth/login') return login(request, env);
   if (request.method === 'POST' && path === '/api/leads') return createLead(request, env);
+  if (request.method === 'POST' && path === '/api/newsletter') return subscribeNewsletter(request, env);
   if (request.method === 'GET' && path === '/api/leads') return listLeads(request, env);
   if (request.method === 'POST' && path === '/api/events') return createEvent(request, env);
   if (request.method === 'GET' && path === '/api/dashboard') return dashboard(request, env);

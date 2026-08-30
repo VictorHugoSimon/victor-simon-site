@@ -24,6 +24,7 @@
         <a href="#sobre" data-pt="Sobre" data-en="About">Sobre</a>
         <a href="#competencias" data-pt="Competências" data-en="Skills">Competências</a>
         <a href="#experiencia" data-pt="Experiência" data-en="Experience">Experiência</a>
+        <a href="#solucoes" data-pt="Soluções" data-en="Solutions">Soluções</a>
         <a href="#projetos" data-pt="Cases" data-en="Cases">Cases</a>
         <a href="#depoimentos" data-pt="Depoimentos" data-en="Testimonials">Depoimentos</a>
         <a href="#contato" data-pt="Contato" data-en="Contact">Contato</a>
@@ -135,6 +136,36 @@
       </div>
     </section>
 
+    <section class="section revenue-section" id="solucoes">
+      <div class="container">
+        <div class="section-title">
+          <div class="eyebrow" data-pt="Soluções para empresas" data-en="Business solutions">Soluções para empresas</div>
+          <h2 data-pt="Comece pelo problema. Eu organizo o caminho até o resultado." data-en="Start with the problem. I organize the path to the result.">Comece pelo problema. Eu organizo o caminho até o resultado.</h2>
+          <p data-pt="Três formatos objetivos para transformar gargalos de gestão, produto, tecnologia e dados em um plano executável." data-en="Three objective formats to turn management, product, technology and data bottlenecks into an executable plan.">Três formatos objetivos para transformar gargalos de gestão, produto, tecnologia e dados em um plano executável.</p>
+        </div>
+        <div class="offer-grid">
+          <article class="offer-card">
+            <span class="offer-number">01</span><h3 data-pt="Diagnóstico Executivo" data-en="Executive Assessment">Diagnóstico Executivo</h3>
+            <p data-pt="Para projetos travados, prioridades conflitantes ou baixa visibilidade da operação." data-en="For stalled projects, conflicting priorities or low operational visibility.">Para projetos travados, prioridades conflitantes ou baixa visibilidade da operação.</p>
+            <ul><li data-pt="Diagnóstico dos gargalos" data-en="Bottleneck assessment">Diagnóstico dos gargalos</li><li data-pt="Mapa de prioridades" data-en="Priority map">Mapa de prioridades</li><li data-pt="Plano de ação de 30 dias" data-en="30-day action plan">Plano de ação de 30 dias</li></ul>
+            <a class="case-link" href="#contato" data-service-select="diagnostico-executivo" data-pt="Solicitar diagnóstico →" data-en="Request assessment →">Solicitar diagnóstico →</a>
+          </article>
+          <article class="offer-card featured">
+            <span class="offer-number">02</span><h3 data-pt="Sprint de Produto & Delivery" data-en="Product & Delivery Sprint">Sprint de Produto & Delivery</h3>
+            <p data-pt="Para estruturar discovery, roadmap, backlog, governança e ritmo de entrega." data-en="To structure discovery, roadmap, backlog, governance and delivery cadence.">Para estruturar discovery, roadmap, backlog, governança e ritmo de entrega.</p>
+            <ul><li>Discovery & roadmap</li><li data-pt="Backlog priorizado" data-en="Prioritized backlog">Backlog priorizado</li><li data-pt="Rituais, papéis e indicadores" data-en="Rituals, roles and metrics">Rituais, papéis e indicadores</li></ul>
+            <a class="case-link" href="#contato" data-service-select="sprint-produto-delivery" data-pt="Conversar sobre o sprint →" data-en="Discuss the sprint →">Conversar sobre o sprint →</a>
+          </article>
+          <article class="offer-card">
+            <span class="offer-number">03</span><h3 data-pt="Automação, Dados & IA" data-en="Automation, Data & AI">Automação, Dados & IA</h3>
+            <p data-pt="Para reduzir tarefas manuais e transformar dados dispersos em decisão." data-en="To reduce manual tasks and turn scattered data into decisions.">Para reduzir tarefas manuais e transformar dados dispersos em decisão.</p>
+            <ul><li data-pt="Mapeamento do processo" data-en="Process mapping">Mapeamento do processo</li><li data-pt="Protótipo de solução" data-en="Solution prototype">Protótipo de solução</li><li data-pt="Plano de implantação e escala" data-en="Implementation and scale plan">Plano de implantação e escala</li></ul>
+            <a class="case-link" href="#contato" data-service-select="automacao-dados-ia" data-pt="Avaliar oportunidade →" data-en="Assess opportunity →">Avaliar oportunidade →</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
     <section class="section alt" id="projetos">
       <div class="container">
         <div class="section-title">
@@ -198,6 +229,7 @@
           <label class="sr-only" for="newsletterEmail">Seu e-mail</label>
           <input id="newsletterEmail" name="email" type="email" autocomplete="email" required placeholder="seu@email.com">
           <button class="btn" type="submit" data-pt="Assinar" data-en="Subscribe">Assinar</button>
+          <div class="form-status" id="newsletterStatus" aria-live="polite"></div>
         </form>
       </div>
     </section>
@@ -215,6 +247,7 @@
         </div>
         <form id="leadForm" novalidate>
           <div class="form-grid">
+            <div class="field full"><label for="serviceInterest" data-pt="Qual solução você procura?" data-en="Which solution are you looking for?">Qual solução você procura?</label><select id="serviceInterest" name="serviceInterest" required><option value="">Selecione uma opção</option><option value="diagnostico-executivo">Diagnóstico Executivo</option><option value="sprint-produto-delivery">Sprint de Produto & Delivery</option><option value="automacao-dados-ia">Automação, Dados & IA</option><option value="solucao-personalizada">Solução personalizada</option></select></div>
             <div class="field"><label for="name" data-pt="Nome" data-en="Name">Nome</label><input id="name" name="name" autocomplete="name" required></div>
             <div class="field"><label for="email">E-mail</label><input id="email" name="email" type="email" autocomplete="email" required></div>
             <div class="field"><label for="company" data-pt="Empresa" data-en="Company">Empresa</label><input id="company" name="company" autocomplete="organization"></div>
@@ -223,6 +256,8 @@
             <div class="field"><label for="budget" data-pt="Faixa de investimento" data-en="Investment range">Faixa de investimento</label><select id="budget" name="budget"><option value="">A definir</option><option value="ate-10k">Até R$ 10 mil</option><option value="10k-30k">R$ 10–30 mil</option><option value="30k-80k">R$ 30–80 mil</option><option value="80k-plus">R$ 80 mil+</option></select></div>
             <div class="field"><label for="deadline" data-pt="Prazo desejado" data-en="Desired timeline">Prazo desejado</label><input id="deadline" name="deadline" placeholder="30, 60 ou 90 dias"></div>
             <div class="field full"><label for="authority" data-pt="Seu papel na decisão" data-en="Your role in the decision">Seu papel na decisão</label><input id="authority" name="authority" placeholder="Decisor, responsável, influenciador..."></div>
+            <div class="field"><label for="preferredContact" data-pt="Canal de contato preferido" data-en="Preferred contact channel">Canal de contato preferido</label><select id="preferredContact" name="preferredContact"><option value="whatsapp">WhatsApp</option><option value="email">E-mail</option><option value="linkedin">LinkedIn</option></select></div>
+            <div class="field full consent-field"><label><input name="contactConsent" type="checkbox" value="yes" required><span data-pt="Autorizo o contato sobre esta solicitação. Meus dados serão usados somente para avaliar e responder este projeto." data-en="I authorize contact about this request. My data will only be used to assess and respond to this project.">Autorizo o contato sobre esta solicitação. Meus dados serão usados somente para avaliar e responder este projeto.</span></label></div>
           </div>
           <button class="btn" type="submit" data-pt="Enviar contexto" data-en="Send context">Enviar contexto</button>
           <div class="form-status" id="formStatus" aria-live="polite"></div>

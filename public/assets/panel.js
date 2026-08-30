@@ -230,8 +230,8 @@ async function loadPanel() {
   const blogPostsTable = document.querySelector('#blogPostsTable');
   if (blogPostsTable) blogPostsTable.innerHTML = posts.length ? `<table class="growth-table"><thead><tr><th>Artigo</th><th>Categoria</th><th>Publicação</th></tr></thead><tbody>${posts.slice(0, 12).map((post) => `<tr><td>${escapeHtml(post.title)}</td><td>${escapeHtml(post.category || '—')}</td><td>${date(post.published_at)}</td></tr>`).join('')}</tbody></table>` : '<div class="growth-empty">Nenhum artigo publicado via API ainda. O blog público mantém conteúdos evergreen de fallback.</div>';
 
-  renderRows('#readyLeads', '#readyEmpty', ready.leads || [], (lead) => `<tr><td>${escapeHtml(lead.name)}<br><span class="muted">${escapeHtml(lead.email)}</span></td><td>${escapeHtml(lead.company || '—')}</td><td><span class="growth-badge">${lead.score}</span></td><td>${escapeHtml(lead.stage)}</td><td>${date(lead.created_at)}</td></tr>`);
-  renderRows('#leads', '#leadsEmpty', leads.leads || [], (lead) => `<tr><td>${escapeHtml(lead.name)}</td><td>${escapeHtml(lead.email)}</td><td>${escapeHtml(lead.company || '—')}</td><td>${lead.score}</td><td><span class="growth-badge">${escapeHtml(lead.stage)}</span></td></tr>`);
+  renderRows('#readyLeads', '#readyEmpty', ready.leads || [], (lead) => `<tr><td>${escapeHtml(lead.name)}<br><span class="muted">${escapeHtml(lead.email)}</span></td><td>${escapeHtml(lead.company || '—')}</td><td>${escapeHtml(lead.service_interest || '—')}</td><td><span class="growth-badge">${lead.score}</span></td><td>${escapeHtml(lead.stage)}</td><td>${date(lead.created_at)}</td></tr>`);
+  renderRows('#leads', '#leadsEmpty', leads.leads || [], (lead) => `<tr><td>${escapeHtml(lead.name)}</td><td>${escapeHtml(lead.email)}</td><td>${escapeHtml(lead.company || '—')}</td><td>${escapeHtml(lead.service_interest || '—')}</td><td>${lead.score}</td><td><span class="growth-badge">${escapeHtml(lead.stage)}</span></td></tr>`);
 
   const recs = baseRecommendations(dashboard, posts);
   renderRecommendationList('#executiveRecommendations', recs.slice(0, 4));

@@ -19,6 +19,9 @@ export function validateLead(input = {}) {
     budget: normalizeText(input.budget, 80),
     deadline: normalizeText(input.deadline, 80),
     authority: normalizeText(input.authority, 120),
+    serviceInterest: normalizeText(input.serviceInterest, 80),
+    preferredContact: ['whatsapp', 'email', 'linkedin'].includes(input.preferredContact) ? input.preferredContact : 'whatsapp',
+    contactConsent: input.contactConsent === true || input.contactConsent === 'yes' || input.contactConsent === 'on',
     source: normalizeText(input.source || 'website', 80),
     language: input.language === 'en' ? 'en' : 'pt'
   };
@@ -27,6 +30,7 @@ export function validateLead(input = {}) {
   if (lead.name.length < 2) errors.push('name');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lead.email)) errors.push('email');
   if (lead.challenge.length < 10) errors.push('challenge');
+  if (!lead.contactConsent) errors.push('contactConsent');
   return { valid: errors.length === 0, errors, lead };
 }
 
