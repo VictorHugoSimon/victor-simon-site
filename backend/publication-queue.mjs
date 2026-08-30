@@ -1,7 +1,7 @@
 import { bearerToken, createToken, id, json, normalizeText, parseJson, verifyToken } from './lib.mjs';
 import { handleSocialRoute } from './social.mjs';
 
-const CHANNELS = new Set(['linkedin', 'instagram']);
+const CHANNELS = new Set(['blog', 'linkedin', 'instagram']);
 const ACTIVE = new Set(['queued', 'retry', 'processing']);
 
 function clean(value, max = 500) { return normalizeText(value, max); }
@@ -24,7 +24,7 @@ async function enqueueScheduledContent(env) {
     FROM content_items c
     WHERE c.status = 'scheduled'
       AND c.approved_at IS NOT NULL
-      AND c.channel IN ('linkedin','instagram')
+      AND c.channel IN ('blog','linkedin','instagram')
       AND c.scheduled_at IS NOT NULL
       AND c.scheduled_at <= CURRENT_TIMESTAMP
       AND NOT EXISTS (
@@ -92,6 +92,7 @@ async function markJob(env, jobId, fields) {
 async function processOne(env, job) {
   const attempt = Number(job.attempts || 0) + 1;
   await env.DB.prepare(`UPDATE publication_jobs SET status='processing', attempts=?, locked_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(attempt, job.id).run();
+  if (job.channel === 'blog') return publishBlog(env, job, attempt);
   const token = await createToken({ sub: 'growth-loop-scheduler', role: 'admin' }, env.AUTH_SECRET, 600);
   const base = String(env.PUBLIC_API_BASE || 'https://growth-loop.internal').replace(/\/+$/, '');
   const metadata = asJson(job.metadata_json);
@@ -126,6 +127,55 @@ async function processOne(env, job) {
   const next = await env.DB.prepare(`SELECT datetime('now', ?) next_at`).bind(retryDelay(attempt)).first();
   await markJob(env, job.id, { status: 'retry', attempts: attempt, nextAttemptAt: next?.next_at, lastError: data.error || `HTTP_${response.status}`, metadata: { ...metadata, result: data } });
   return { id: job.id, status: 'retry', nextAttemptAt: next?.next_at };
+}
+
+async function publishBlog(env, job, attempt) {
+  const content = await env.DB.prepare(`
+    SELECT id, channel, language, title, body, hook, pillar, slug, seo_title, seo_description,
+      metadata_json, approved_at, scheduled_at
+    FROM content_items WHERE id = ?
+  `).bind(job.content_item_id).first();
+  if (!content || content.channel !== 'blog' || !content.approved_at) {
+    await markJob(env, job.id, { status: 'blocked_external', attempts: attempt, lastError: 'approved_blog_content_required' });
+    return { id: job.id, status: 'blocked_external', error: 'approved_blog_content_required' };
+  }
+  const title = clean(content.title, 180);
+  const body = String(content.body || '').trim().slice(0, 150_000);
+  if (title.length < 8 || body.length < 300) {
+    await markJob(env, job.id, { status: 'blocked_external', attempts: attempt, lastError: 'blog_preflight_failed' });
+    return { id: job.id, status: 'blocked_external', error: 'blog_preflight_failed' };
+  }
+  const metadata = asJson(content.metadata_json);
+  const existing = await env.DB.prepare('SELECT id, slug FROM posts WHERE content_item_id = ? LIMIT 1').bind(content.id).first();
+  const postId = existing?.id || id('post');
+  const slug = clean(existing?.slug || content.slug, 180) || `${clean(title, 120).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${postId.slice(-6)}`;
+  const excerpt = clean(content.hook || content.seo_description || body.slice(0, 300), 320);
+  const keywords = Array.isArray(metadata.keywords) ? metadata.keywords.slice(0, 12) : [];
+  const readingMinutes = Math.max(1, Math.ceil(body.split(/\s+/).filter(Boolean).length / 220));
+  const canonicalBase = String(env.SITE_BASE || 'https://victor-hugo-teixeira-simon-ac9.pages.dev').replace(/\/+$/, '');
+  const canonicalUrl = `${canonicalBase}/blog.html?post=${encodeURIComponent(slug)}`;
+  if (existing) {
+    await env.DB.prepare(`UPDATE posts SET language=?, title=?, excerpt=?, content=?, category=?, keywords_json=?, status='published',
+      seo_title=?, seo_description=?, canonical_url=?, reading_minutes=?, published_at=COALESCE(published_at,CURRENT_TIMESTAMP), updated_at=CURRENT_TIMESTAMP
+      WHERE id=?`).bind(content.language === 'en' ? 'en' : 'pt', title, excerpt, body, clean(content.pillar, 80), JSON.stringify(keywords),
+      clean(content.seo_title || title, 180), clean(content.seo_description || excerpt, 320), canonicalUrl, readingMinutes, postId).run();
+  } else {
+    await env.DB.prepare(`INSERT INTO posts (id,slug,language,title,excerpt,content,category,keywords_json,status,published_at,
+      content_item_id,seo_title,seo_description,canonical_url,reading_minutes)
+      VALUES (?,?,?,?,?,?,?,?,'published',CURRENT_TIMESTAMP,?,?,?,?,?)`).bind(
+      postId, slug, content.language === 'en' ? 'en' : 'pt', title, excerpt, body, clean(content.pillar, 80), JSON.stringify(keywords),
+      content.id, clean(content.seo_title || title, 180), clean(content.seo_description || excerpt, 320), canonicalUrl, readingMinutes
+    ).run();
+  }
+  const publicationId = id('publication');
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO publications (id,content_item_id,channel,external_id,external_url,status,scheduled_at,published_at,metadata_json)
+      VALUES (?,?, 'blog', ?, ?, 'published', ?, CURRENT_TIMESTAMP, ?)`)
+      .bind(publicationId, content.id, postId, canonicalUrl, content.scheduled_at, JSON.stringify({ automatic: true, postId, slug })),
+    env.DB.prepare(`UPDATE content_items SET status='published', published_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(content.id)
+  ]);
+  await markJob(env, job.id, { status: 'completed', attempts: attempt, publicationId, metadata: { postId, slug, canonicalUrl, automatic: true } });
+  return { id: job.id, status: 'completed', publicationId, postId, slug };
 }
 
 export async function processPublicationJobs(env, limit = 10) {
@@ -166,3 +216,5 @@ export async function handlePublicationQueueRoute(request, env) {
 }
 
 export { enqueueScheduledContent };
+
+export { publishBlog };

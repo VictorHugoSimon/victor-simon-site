@@ -114,62 +114,22 @@ async function trackAttributionTouch(eventName = 'page_view') {
 }
 
 function enhanceBrandCases() {
-  const caseLogos = [
-    { event: 'case_terrapulse', src: '/assets/logo-terra-pulse.svg', alt: 'Terra Pulse' },
-    { event: 'case_codesolution', src: '/assets/logo-code-solution.svg', alt: 'Code Solution' }
-  ];
-
-  caseLogos.forEach(({ event, src, alt }) => {
-    const link = document.querySelector(`[data-event="${event}"]`);
-    const visual = link?.closest('.gallery-card')?.querySelector('.gallery-visual');
-    if (!visual) return;
-    visual.innerHTML = '';
-    visual.style.background = '#fff';
-    const image = document.createElement('img');
-    image.src = src;
-    image.alt = alt;
-    image.loading = 'lazy';
-    image.style.objectFit = 'contain';
-    image.style.padding = alt === 'Code Solution' ? '28px' : '34px 24px';
-    visual.appendChild(image);
-  });
-
-  const ifarmPanel = document.querySelector('#ifarm .ifarm-panel');
-  if (ifarmPanel && !ifarmPanel.querySelector('.ifarm-brand-link')) {
-    const logoLink = document.createElement('a');
-    logoLink.className = 'ifarm-brand-link';
-    logoLink.href = 'https://www.ifarm.agr.br/';
-    logoLink.target = '_blank';
-    logoLink.rel = 'noopener noreferrer';
-    logoLink.dataset.event = 'case_ifarm_logo';
-    logoLink.setAttribute('aria-label', 'Visitar site oficial da iFarm');
-    logoLink.style.cssText = 'display:block;background:#fff;border-radius:16px;padding:14px 18px;margin:0 0 24px;';
-
-    const logo = document.createElement('img');
-    logo.src = '/assets/logo-ifarm.svg';
-    logo.alt = 'iFarm';
-    logo.loading = 'lazy';
-    logo.style.cssText = 'display:block;width:100%;height:auto;max-height:112px;object-fit:contain;';
-    logoLink.appendChild(logo);
-    ifarmPanel.prepend(logoLink);
-  }
-
-  const ifarmActions = document.querySelector('#ifarm .hero-actions');
-  if (ifarmActions && !ifarmActions.querySelector('[data-event="case_ifarm_site"]')) {
-    const siteLink = document.createElement('a');
-    siteLink.className = 'btn light';
-    siteLink.href = 'https://www.ifarm.agr.br/';
-    siteLink.target = '_blank';
-    siteLink.rel = 'noopener noreferrer';
-    siteLink.dataset.event = 'case_ifarm_site';
-    siteLink.dataset.pt = 'Visitar iFarm';
-    siteLink.dataset.en = 'Visit iFarm';
-    siteLink.textContent = language === 'en' ? 'Visit iFarm' : 'Visitar iFarm';
-    ifarmActions.appendChild(siteLink);
-  }
+  document.querySelectorAll('.gallery-visual img').forEach((image) => { image.loading = 'lazy'; });
 }
 
 enhanceBrandCases();
+
+const siteHeader = document.querySelector('.site-header');
+const menuToggle = document.querySelector('#menuToggle');
+menuToggle?.addEventListener('click', () => {
+  const open = siteHeader?.classList.toggle('menu-open') || false;
+  menuToggle.setAttribute('aria-expanded', String(open));
+  menuToggle.setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
+});
+document.querySelectorAll('#mainMenu a').forEach((link) => link.addEventListener('click', () => {
+  siteHeader?.classList.remove('menu-open');
+  menuToggle?.setAttribute('aria-expanded', 'false');
+}));
 
 document.querySelectorAll('[data-event]').forEach((element) => {
   element.addEventListener('click', () => track(element.dataset.event));

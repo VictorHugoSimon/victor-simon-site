@@ -18,4 +18,8 @@ async function check(url, predicate, attempts = 6) {
 
 await check(`${apiUrl}/api/health`, (body) => JSON.parse(body).status === 'ok');
 await check(siteUrl, (body) => body.includes('Victor Hugo') && body.includes('__API_BASE__') === false);
-console.log('Smoke test concluído: API e site respondendo.');
+await check(`${siteUrl}/blog.html`, (body) => body.includes('Blog') && body.includes('/assets/blog.js'));
+await check(`${siteUrl}/painel.html`, (body) => body.includes('Growth OS') && body.includes('noindex'));
+await check(`${siteUrl}/assets/app.js`, (body, response) => response.headers.get('content-type')?.includes('javascript') && body.includes('menuToggle'));
+await check(`${siteUrl}/assets/logo-code-solution.svg`, (body, response) => response.headers.get('content-type')?.includes('svg') && body.includes('<svg'));
+console.log('Smoke test concluído: API, páginas críticas, JavaScript e logos respondendo.');

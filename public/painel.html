@@ -9,6 +9,7 @@
   <title>Victor Hugo Growth OS | Acesso restrito</title>
   <link rel="stylesheet" href="/assets/styles.css">
   <link rel="stylesheet" href="/assets/growth-panel.css">
+  <link rel="stylesheet" href="/assets/responsive-overrides.css">
 </head>
 <body>
   <main id="loginView" class="login-shell">
@@ -37,6 +38,7 @@
           <button data-view="channels">Canais & Social</button>
           <button data-view="seo">Blog & SEO</button>
           <div class="group">Negócio</div>
+          <button data-view="prospecting">Prospecção</button>
           <button data-view="crm">CRM & Leads</button>
           <button data-view="insights">Recomendações IA</button>
         </nav>
@@ -99,6 +101,15 @@
           <section class="growth-panel"><div class="growth-panel-head"><div><h2>Pipeline completo</h2></div></div><div class="table-wrap"><table class="growth-table"><thead><tr><th>Nome</th><th>Contato</th><th>Empresa</th><th>Score</th><th>Estágio</th></tr></thead><tbody id="leads"></tbody></table><div class="growth-empty" id="leadsEmpty">Carregando...</div></div></section>
         </div>
 
+        <div class="growth-view" data-view-panel="prospecting">
+          <div class="growth-head"><div><h1>Prospecção Assistida</h1><p>Pesquisa, qualificação e preparação de leads com evidências e controle humano.</p></div><span class="growth-badge status ready">outbound bloqueado por padrão</span></div>
+          <div class="growth-grid" id="prospectingKpis"><article class="growth-kpi"><span>Status</span><strong>—</strong><small>carregando</small></article></div>
+          <section class="growth-panel compliance-panel"><div class="growth-panel-head"><div><h2>Governança de contato</h2><p>Os agentes podem pesquisar fontes permitidas, pontuar e criar rascunhos. Convites, mensagens, e-mails e publicações exigem aprovação humana e APIs oficiais.</p></div></div><div class="policy-row"><span class="growth-badge status ready">Permitido</span><span>Pesquisa pública, scoring, conteúdo, rascunhos e fila de handoff.</span></div><div class="policy-row"><span class="growth-badge status pending">Aprovação</span><span>Qualquer comunicação externa ou publicação em rede social.</span></div></section>
+          <section class="growth-panel"><div class="growth-panel-head"><div><h2>Agentes de prospecção</h2><p>Especialistas independentes, auditáveis e sem envio autônomo.</p></div></div><div class="agent-grid" id="prospectingAgents"><div class="growth-empty">Carregando agentes...</div></div></section>
+          <section class="growth-panel"><div class="growth-panel-head"><div><h2>Leads quentes para revisão</h2><p>Score ≥ 80, sem opt-out e com evidências registradas.</p></div></div><div class="table-wrap"><table class="growth-table"><thead><tr><th>Contato</th><th>Empresa</th><th>Cargo</th><th>Score</th><th>Política</th></tr></thead><tbody id="prospectingHotLeads"></tbody></table><div class="growth-empty" id="prospectingHotEmpty">Carregando...</div></div></section>
+          <section class="growth-panel"><div class="growth-panel-head"><div><h2>Empresas-alvo</h2><p>Pipeline de contas organizado por aderência ao ICP.</p></div></div><div class="table-wrap"><table class="growth-table"><thead><tr><th>Empresa</th><th>Setor</th><th>Região</th><th>ICP</th><th>Status</th></tr></thead><tbody id="prospectingAccounts"></tbody></table><div class="growth-empty" id="prospectingAccountsEmpty">Carregando...</div></div></section>
+        </div>
+
         <div class="growth-view" data-view-panel="insights">
           <div class="growth-head"><div><h1>Recomendações IA</h1><p>Próximas melhores ações com base em conteúdo, audiência e conversão.</p></div></div>
           <section class="growth-panel" id="insightList"></section>
@@ -111,6 +122,7 @@
 
   <dialog id="generateDialog" style="border:0;border-radius:22px;padding:0;max-width:640px;width:92%;box-shadow:0 30px 90px rgba(16,24,40,.3)"><form method="dialog" class="growth-panel" id="generateForm" style="margin:0"><div class="growth-panel-head"><div><h2>Gerar rascunho com IA</h2><p>O resultado será salvo como draft e nunca publicado sem aprovação.</p></div><button class="growth-btn" value="cancel" type="button" data-close-dialog="generateDialog">Fechar</button></div><div class="field"><label for="generationTopic">Tema e contexto</label><textarea id="generationTopic" name="topic" rows="6" minlength="8" required placeholder="Ex.: Como estruturar um PMO orientado por IA para reduzir retrabalho e melhorar decisões..."></textarea></div><div class="field"><label for="generationPillar">Pilar</label><select id="generationPillar" name="pillar"><option>PMO & Governança</option><option>Produto & Delivery</option><option>IA & Automação</option><option>Transformação Digital</option><option>Dados & Mercado</option><option>AgTech</option></select></div><div class="field"><label for="generationChannel">Canal principal</label><select id="generationChannel" name="channel"><option value="blog">Blog</option><option value="linkedin">LinkedIn</option><option value="instagram">Instagram</option><option value="newsletter">Newsletter</option></select></div><button class="growth-btn primary" type="submit">Gerar e salvar como rascunho</button><div class="form-status" id="generationStatus"></div></form></dialog>
 
+  <script type="module" src="/assets/prospecting-ui.js"></script>
   <script type="module" src="/assets/panel.js"></script>
 </body>
 </html>

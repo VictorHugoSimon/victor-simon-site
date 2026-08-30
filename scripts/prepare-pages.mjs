@@ -9,7 +9,7 @@ function arg(name, fallback) {
 const environment = arg('--environment', process.env.DEPLOY_ENVIRONMENT || 'staging');
 const outputName = arg('--out', 'dist');
 const apiBase = String(process.env.API_BASE || 'https://api.example.invalid').replace(/\/+$/, '');
-const siteBase = String(process.env.SITE_BASE || 'https://victor-hugo-teixeira-simon.pages.dev').replace(/\/+$/, '');
+const siteBase = String(process.env.SITE_BASE || 'https://victor-hugo-teixeira-simon-ac9.pages.dev').replace(/\/+$/, '');
 const legacySiteBase = 'https://www.victorhugoteixeirasimon.com.br';
 const socialImage = 'https://avatars.githubusercontent.com/u/111150704?v=4';
 const cleanThemeVersion = 'reference-light-v2-20260828';

@@ -53,12 +53,12 @@ jobs:
       - name: Build staging
         env:
           API_BASE: https://api-staging.example.com
-          SITE_BASE: https://victor-hugo-teixeira-simon.pages.dev
+          SITE_BASE: https://victor-hugo-teixeira-simon-ac9.pages.dev
           REQUIRE_API_BASE: '1'
         run: npm run build:staging
       - name: Build production
         env:
           API_BASE: https://api.example.com
-          SITE_BASE: https://victor-hugo-teixeira-simon.pages.dev
+          SITE_BASE: https://victor-hugo-teixeira-simon-ac9.pages.dev
           REQUIRE_API_BASE: '1'
         run: npm run build:production

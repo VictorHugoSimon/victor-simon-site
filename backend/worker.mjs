@@ -15,6 +15,7 @@ import { firstReply } from './chatbot.mjs';
 import { handleGrowthRoute } from './growth.mjs';
 import { handleGrowthAutomationRoute } from './growth-automation.mjs';
 import { handleSocialRoute } from './social.mjs';
+import { handleProspectingRoute } from './prospecting.mjs';
 
 const publicPostRoutes = new Set(['/api/leads', '/api/events']);
 
@@ -198,7 +199,8 @@ async function posts(request, env) {
   const url = new URL(request.url);
   const language = url.searchParams.get('lang') === 'en' ? 'en' : 'pt';
   const result = await env.DB.prepare(`
-    SELECT id, slug, language, title, excerpt, content, category, published_at
+    SELECT id, slug, language, title, excerpt, content, category, published_at,
+      seo_title, seo_description, canonical_url, reading_minutes
     FROM posts WHERE status = 'published' AND language = ?
     ORDER BY published_at DESC LIMIT 100
   `).bind(language).all();
@@ -315,6 +317,8 @@ async function route(request, env) {
   if (automationResponse) return automationResponse;
   const growthResponse = await handleGrowthRoute(request, env);
   if (growthResponse) return growthResponse;
+  const prospectingResponse = await handleProspectingRoute(request, env);
+  if (prospectingResponse) return prospectingResponse;
   if (request.method === 'GET' && path === '/api/health') return health(env);
   if (request.method === 'POST' && path === '/api/auth/login') return login(request, env);
   if (request.method === 'POST' && path === '/api/leads') return createLead(request, env);

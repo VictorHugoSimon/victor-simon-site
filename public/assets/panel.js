@@ -45,6 +45,7 @@ function setupNavigation() {
       const view = button.dataset.view;
       document.querySelectorAll('[data-view]').forEach((item) => item.classList.toggle('active', item === button));
       document.querySelectorAll('[data-view-panel]').forEach((panel) => panel.classList.toggle('active', panel.dataset.viewPanel === view));
+      if (view === 'prospecting') window.loadProspectingWorkspace?.();
     });
   });
 }
@@ -242,6 +243,7 @@ async function loadPanel() {
     const agentRuns = document.querySelector('#agentRuns');
     if (agentRuns) agentRuns.textContent = 'O backend Growth OS será ativado após aplicar a migration 0003 no ambiente.';
   });
+  await window.loadProspectingWorkspace?.();
 }
 
 function openDialog(id) { document.querySelector(`#${id}`)?.showModal(); }

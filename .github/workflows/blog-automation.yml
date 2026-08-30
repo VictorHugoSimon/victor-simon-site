@@ -1,0 +1,31 @@
+name: Publicação automática do blog
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: blog-publication-production
+  cancel-in-progress: false
+
+jobs:
+  publish-approved:
+    name: Publicar conteúdo aprovado e agendado
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production
+    steps:
+      - name: Executar fila segura
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          API_URL: https://victor-simon-api.victorhugoteixeirasimon6.workers.dev
+        run: |
+          ROBOT_KEY="$(node -e "const c=require('node:crypto');process.stdout.write(c.createHmac('sha256',process.env.CLOUDFLARE_API_TOKEN).update('victor-simon-site:production:robot').digest('hex'))")"
+          curl --fail-with-body --silent --show-error \
+            --request POST "$API_URL/api/publication-jobs/run" \
+            --header "X-Robot-Key: $ROBOT_KEY" \
+            --header "Content-Type: application/json"

@@ -6,13 +6,26 @@ async function text(path) {
   return readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 }
 
-test('Fila social só enfileira conteúdo aprovado e agendado', async () => {
+test('Fila multicanal só enfileira conteúdo aprovado e agendado', async () => {
   const queue = await text('backend/publication-queue.mjs');
   assert.ok(queue.includes("c.status = 'scheduled'"));
   assert.ok(queue.includes('c.approved_at IS NOT NULL'));
-  assert.ok(queue.includes("c.channel IN ('linkedin','instagram')"));
+  assert.ok(queue.includes("c.channel IN ('blog','linkedin','instagram')"));
   assert.ok(queue.includes('approved_content_required'));
   assert.ok(queue.includes('channel_mismatch'));
+});
+
+test('Blog aprovado vira post público idempotente', async () => {
+  const [queue, migration, workflow] = await Promise.all([
+    text('backend/publication-queue.mjs'),
+    text('migrations/0006_blog_automation.sql'),
+    text('.github/workflows/blog-automation.yml')
+  ]);
+  assert.ok(queue.includes('async function publishBlog'));
+  assert.ok(queue.includes('WHERE content_item_id = ?'));
+  assert.ok(queue.includes("status='published'"));
+  assert.ok(migration.includes('CREATE UNIQUE INDEX'));
+  assert.ok(workflow.includes('/api/publication-jobs/run'));
 });
 
 test('Fila usa publishers oficiais e retry controlado', async () => {

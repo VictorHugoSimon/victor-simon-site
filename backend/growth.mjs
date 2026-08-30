@@ -136,21 +136,25 @@ async function updateContent(request, env, contentId) {
   if (!current) return json({ error: 'not_found' }, { status: 404 });
   const status = body.status && CONTENT_STATUSES.has(body.status) ? body.status : current.status;
   const scheduledAt = body.scheduledAt === undefined ? current.scheduled_at : (clean(body.scheduledAt, 60) || null);
+  const contentChanged = body.title !== undefined || body.body !== undefined || body.hook !== undefined ||
+    body.cta !== undefined || body.seoTitle !== undefined || body.seoDescription !== undefined;
+  const approvalReset = contentChanged ? null : current.approved_at;
+  const safeStatus = contentChanged && ['approved', 'scheduled'].includes(status) ? 'review' : status;
   await env.DB.prepare(`
     UPDATE content_items SET title = ?, body = ?, hook = ?, cta = ?, pillar = ?, status = ?, scheduled_at = ?,
-      seo_title = ?, seo_description = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+      seo_title = ?, seo_description = ?, approved_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
   `).bind(
     clean(body.title || current.title, 180),
     body.body === undefined ? current.body : String(body.body || '').trim().slice(0, 150_000),
     body.hook === undefined ? current.hook : clean(body.hook, 600),
     body.cta === undefined ? current.cta : clean(body.cta, 600),
     body.pillar === undefined ? current.pillar : clean(body.pillar, 80),
-    status, scheduledAt,
+    safeStatus, scheduledAt,
     body.seoTitle === undefined ? current.seo_title : clean(body.seoTitle, 180),
     body.seoDescription === undefined ? current.seo_description : clean(body.seoDescription, 320),
-    contentId
+    approvalReset, contentId
   ).run();
-  return json({ id: contentId, status, scheduledAt });
+  return json({ id: contentId, status: safeStatus, scheduledAt, approvalInvalidated: contentChanged });
 }
 
 async function decideContent(request, env, contentId) {
@@ -165,7 +169,7 @@ async function decideContent(request, env, contentId) {
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO approvals (id, content_item_id, decision, note, decided_by, decided_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`)
       .bind(approvalId, contentId, decision, clean(body.note, 2000), 'admin'),
-    env.DB.prepare('UPDATE content_items SET status = ?, approved_at = CASE WHEN ? = \'approved\' THEN CURRENT_TIMESTAMP ELSE approved_at END, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+    env.DB.prepare('UPDATE content_items SET status = ?, approved_at = CASE WHEN ? = \'approved\' THEN CURRENT_TIMESTAMP ELSE NULL END, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
       .bind(nextStatus, decision, contentId)
   ]);
   return json({ id: contentId, decision, status: nextStatus });
