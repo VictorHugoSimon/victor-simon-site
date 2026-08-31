@@ -5,6 +5,13 @@ import { handlePublicationQueueRoute, processPublicationJobs } from './publicati
 import { handleProspectingAutomationRoute, processProspectingAgentJobs } from './prospecting-runner.mjs';
 import { handleProspectingMaintenanceRoute, runProspectingMaintenance } from './prospecting-maintenance.mjs';
 import { handleVerifiedContactImportRoute, importVerifiedPublicContacts } from './verified-contact-importer.mjs';
+import {
+  handleGrowthV3Route,
+  notifyInboundLead,
+  notifyPanelMutation,
+  notifyProspectingResponse,
+  processOwnerNotifications
+} from './growth-v3.mjs';
 
 function allowedOrigin(request, env) {
   const origin = request.headers.get('Origin') || '';
@@ -59,12 +66,30 @@ async function maybeAttachLead(response, env, leadPayload) {
   return response;
 }
 
+function notifySpecialResponse(response, path, env, ctx) {
+  if (!response?.ok || !ctx?.waitUntil) return;
+  ctx.waitUntil((async () => {
+    try {
+      const payload = await response.clone().json();
+      await notifyProspectingResponse(env, path, payload);
+    } catch (error) {
+      console.error('growth_v3_special_notification_error', { path, message: error?.message });
+    }
+  })());
+}
+
+function shouldNotifyPanelMutation(method, path) {
+  if (!['POST', 'PATCH'].includes(method)) return false;
+  if (/^\/api\/(prospecting|sales|growth|growth-automation|social)(?:\/|$)/.test(path)) return true;
+  return /^\/api\/leads\/[a-zA-Z0-9_-]+$/.test(path);
+}
+
 export default {
   async fetch(request, env, ctx) {
     try {
       const url = new URL(request.url);
       const path = url.pathname.replace(/\/+$/, '') || '/';
-      if (path.startsWith('/api/growth-loop') || path.startsWith('/api/publication-jobs') || path.startsWith('/api/prospecting-automation') || path.startsWith('/api/prospecting-maintenance') || path.startsWith('/api/prospecting-verified-contacts')) {
+      if (path.startsWith('/api/growth-loop') || path.startsWith('/api/publication-jobs') || path.startsWith('/api/prospecting-automation') || path.startsWith('/api/prospecting-maintenance') || path.startsWith('/api/prospecting-verified-contacts') || path.startsWith('/api/growth-v3') || path === '/api/notifications/run') {
         if (request.method === 'OPTIONS') return withGrowthHeaders(new Response(null, { status: 204 }), request, env);
         if (request.headers.get('Origin') && !allowedOrigin(request, env)) {
           return withGrowthHeaders(jsonResponse({ error: 'origin_not_allowed' }, 403), request, env);
@@ -72,12 +97,23 @@ export default {
         if (request.method === 'POST' && path === '/api/growth-loop/touch' && !(await rateLimitGrowthTouch(request, env))) {
           return withGrowthHeaders(jsonResponse({ error: 'rate_limited' }, 429), request, env);
         }
+        const growthV3Response = await handleGrowthV3Route(request, env);
+        if (growthV3Response) return withGrowthHeaders(growthV3Response, request, env);
         const verifiedContactResponse = await handleVerifiedContactImportRoute(request, env);
-        if (verifiedContactResponse) return withGrowthHeaders(verifiedContactResponse, request, env);
+        if (verifiedContactResponse) {
+          notifySpecialResponse(verifiedContactResponse, path, env, ctx);
+          return withGrowthHeaders(verifiedContactResponse, request, env);
+        }
         const maintenanceResponse = await handleProspectingMaintenanceRoute(request, env);
-        if (maintenanceResponse) return withGrowthHeaders(maintenanceResponse, request, env);
+        if (maintenanceResponse) {
+          notifySpecialResponse(maintenanceResponse, path, env, ctx);
+          return withGrowthHeaders(maintenanceResponse, request, env);
+        }
         const prospectingResponse = await handleProspectingAutomationRoute(request, env);
-        if (prospectingResponse) return withGrowthHeaders(prospectingResponse, request, env);
+        if (prospectingResponse) {
+          notifySpecialResponse(prospectingResponse, path, env, ctx);
+          return withGrowthHeaders(prospectingResponse, request, env);
+        }
         const publicationResponse = await handlePublicationQueueRoute(request, env);
         if (publicationResponse) return withGrowthHeaders(publicationResponse, request, env);
         const growthLoopResponse = await handleGrowthLoopRoute(request, env);
@@ -87,10 +123,33 @@ export default {
       if (request.method === 'POST' && path === '/api/leads') {
         let payload = null;
         try { payload = await request.clone().json(); } catch {}
-        const response = await coreWorker.fetch(request, env, ctx);
-        return maybeAttachLead(response, env, payload);
+        let response = await coreWorker.fetch(request, env, ctx);
+        response = await maybeAttachLead(response, env, payload);
+        if (response?.ok && ctx?.waitUntil) {
+          ctx.waitUntil((async () => {
+            try {
+              const result = await response.clone().json();
+              await notifyInboundLead(env, payload || {}, result || {});
+            } catch (error) {
+              console.error('growth_v3_lead_notification_error', { message: error?.message });
+            }
+          })());
+        }
+        return response;
       }
-      return coreWorker.fetch(request, env, ctx);
+
+      const response = await coreWorker.fetch(request, env, ctx);
+      if (response?.ok && shouldNotifyPanelMutation(request.method, path) && ctx?.waitUntil) {
+        ctx.waitUntil((async () => {
+          try {
+            const result = await response.clone().json().catch(() => ({}));
+            await notifyPanelMutation(env, path, request.method, result || {});
+          } catch (error) {
+            console.error('growth_v3_panel_notification_error', { path, message: error?.message });
+          }
+        })());
+      }
+      return response;
     } catch (error) {
       console.error('worker_entry_error', { message: error?.message, stack: error?.stack });
       return coreWorker.fetch(request, env, ctx);
@@ -104,6 +163,7 @@ export default {
         await runProspectingMaintenance(env);
         await importVerifiedPublicContacts(env);
         await processProspectingAgentJobs(env, 8);
+        await processOwnerNotifications(env, 30);
         await runScheduledGrowthLoop(env);
       } catch (error) {
         console.error('scheduled_growth_error', { cron: controller?.cron, message: error?.message });
