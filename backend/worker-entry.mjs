@@ -4,6 +4,7 @@ import { attachLeadAttribution, handleGrowthLoopRoute, runScheduledGrowthLoop } 
 import { handlePublicationQueueRoute, processPublicationJobs } from './publication-queue.mjs';
 import { handleProspectingAutomationRoute, processProspectingAgentJobs } from './prospecting-runner.mjs';
 import { handleProspectingMaintenanceRoute, runProspectingMaintenance } from './prospecting-maintenance.mjs';
+import { handleVerifiedContactImportRoute, importVerifiedPublicContacts } from './verified-contact-importer.mjs';
 
 function allowedOrigin(request, env) {
   const origin = request.headers.get('Origin') || '';
@@ -63,7 +64,7 @@ export default {
     try {
       const url = new URL(request.url);
       const path = url.pathname.replace(/\/+$/, '') || '/';
-      if (path.startsWith('/api/growth-loop') || path.startsWith('/api/publication-jobs') || path.startsWith('/api/prospecting-automation') || path.startsWith('/api/prospecting-maintenance')) {
+      if (path.startsWith('/api/growth-loop') || path.startsWith('/api/publication-jobs') || path.startsWith('/api/prospecting-automation') || path.startsWith('/api/prospecting-maintenance') || path.startsWith('/api/prospecting-verified-contacts')) {
         if (request.method === 'OPTIONS') return withGrowthHeaders(new Response(null, { status: 204 }), request, env);
         if (request.headers.get('Origin') && !allowedOrigin(request, env)) {
           return withGrowthHeaders(jsonResponse({ error: 'origin_not_allowed' }, 403), request, env);
@@ -71,6 +72,8 @@ export default {
         if (request.method === 'POST' && path === '/api/growth-loop/touch' && !(await rateLimitGrowthTouch(request, env))) {
           return withGrowthHeaders(jsonResponse({ error: 'rate_limited' }, 429), request, env);
         }
+        const verifiedContactResponse = await handleVerifiedContactImportRoute(request, env);
+        if (verifiedContactResponse) return withGrowthHeaders(verifiedContactResponse, request, env);
         const maintenanceResponse = await handleProspectingMaintenanceRoute(request, env);
         if (maintenanceResponse) return withGrowthHeaders(maintenanceResponse, request, env);
         const prospectingResponse = await handleProspectingAutomationRoute(request, env);
@@ -99,6 +102,7 @@ export default {
       try {
         await processPublicationJobs(env, 10);
         await runProspectingMaintenance(env);
+        await importVerifiedPublicContacts(env);
         await processProspectingAgentJobs(env, 8);
         await runScheduledGrowthLoop(env);
       } catch (error) {
