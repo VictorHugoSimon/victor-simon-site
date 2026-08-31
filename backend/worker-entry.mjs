@@ -5,6 +5,7 @@ import { handlePublicationQueueRoute, processPublicationJobs } from './publicati
 import { handleProspectingAutomationRoute, processProspectingAgentJobs } from './prospecting-runner.mjs';
 import { handleProspectingMaintenanceRoute, runProspectingMaintenance } from './prospecting-maintenance.mjs';
 import { handleVerifiedContactImportRoute, importVerifiedPublicContacts } from './verified-contact-importer.mjs';
+import { handleRevenuePriorityRoute, prioritizeRevenueQueue } from './revenue-priority.mjs';
 import {
   handleGrowthV3Route,
   notifyInboundLead,
@@ -89,7 +90,7 @@ export default {
     try {
       const url = new URL(request.url);
       const path = url.pathname.replace(/\/+$/, '') || '/';
-      if (path.startsWith('/api/growth-loop') || path.startsWith('/api/publication-jobs') || path.startsWith('/api/prospecting-automation') || path.startsWith('/api/prospecting-maintenance') || path.startsWith('/api/prospecting-verified-contacts') || path.startsWith('/api/growth-v3') || path === '/api/notifications/run') {
+      if (path.startsWith('/api/growth-loop') || path.startsWith('/api/publication-jobs') || path.startsWith('/api/prospecting-automation') || path.startsWith('/api/prospecting-maintenance') || path.startsWith('/api/prospecting-verified-contacts') || path.startsWith('/api/revenue-priority') || path.startsWith('/api/growth-v3') || path === '/api/notifications/run') {
         if (request.method === 'OPTIONS') return withGrowthHeaders(new Response(null, { status: 204 }), request, env);
         if (request.headers.get('Origin') && !allowedOrigin(request, env)) {
           return withGrowthHeaders(jsonResponse({ error: 'origin_not_allowed' }, 403), request, env);
@@ -99,6 +100,8 @@ export default {
         }
         const growthV3Response = await handleGrowthV3Route(request, env);
         if (growthV3Response) return withGrowthHeaders(growthV3Response, request, env);
+        const revenuePriorityResponse = await handleRevenuePriorityRoute(request, env);
+        if (revenuePriorityResponse) return withGrowthHeaders(revenuePriorityResponse, request, env);
         const verifiedContactResponse = await handleVerifiedContactImportRoute(request, env);
         if (verifiedContactResponse) {
           notifySpecialResponse(verifiedContactResponse, path, env, ctx);
@@ -162,6 +165,7 @@ export default {
         await processPublicationJobs(env, 10);
         await runProspectingMaintenance(env);
         await importVerifiedPublicContacts(env);
+        await prioritizeRevenueQueue(env);
         await processProspectingAgentJobs(env, 8);
         await processOwnerNotifications(env, 30);
         await runScheduledGrowthLoop(env);
