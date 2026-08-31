@@ -83,7 +83,7 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await cp(source, output, { recursive: true });
 
-for (const file of ['index.html', 'blog.html', 'painel.html', 'assets/app.js', 'assets/blog.js', 'assets/panel.js', 'assets/growth-automation-ui.js', 'assets/social-ui.js', 'assets/growth-loop-ui.js', 'assets/attribution.js']) {
+for (const file of ['index.html', 'blog.html', 'painel.html', 'assets/app.js', 'assets/blog.js', 'assets/panel.js', 'assets/growth-automation-ui.js', 'assets/social-ui.js', 'assets/growth-loop-ui.js', 'assets/attribution.js', 'assets/growth-v3-ui.js']) {
   const path = resolve(output, file);
   let content = await readFile(path, 'utf8');
   content = content
@@ -94,7 +94,7 @@ for (const file of ['index.html', 'blog.html', 'painel.html', 'assets/app.js', '
   content = isolateGrowthPanel(content, file);
   content = versionCleanAssets(content, file);
   if (file === 'painel.html') {
-    const panelScripts = ['/assets/growth-automation-ui.js', '/assets/social-ui.js', '/assets/growth-loop-ui.js', '/assets/prospecting-intake-ui.js'];
+    const panelScripts = ['/assets/growth-automation-ui.js', '/assets/social-ui.js', '/assets/growth-loop-ui.js', '/assets/prospecting-intake-ui.js', '/assets/growth-v3-ui.js'];
     for (const scriptPath of panelScripts) {
       if (!content.includes(scriptPath)) {
         content = content.replace('</body>', `  <script type="module" src="${scriptPath}"></script>\n</body>`);

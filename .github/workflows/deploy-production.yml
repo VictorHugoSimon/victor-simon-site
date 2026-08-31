@@ -163,6 +163,33 @@ jobs:
           else
             echo 'Instagram OAuth ainda não configurado; deploy segue normalmente.'
           fi
+      - name: Configurar alertas WhatsApp opcionais
+        env:
+          WHATSAPP_ACCESS_TOKEN: ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
+          WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+          WHATSAPP_OWNER_NUMBER: ${{ secrets.WHATSAPP_OWNER_NUMBER }}
+          WHATSAPP_TEMPLATE_NAME: ${{ secrets.WHATSAPP_TEMPLATE_NAME }}
+          WHATSAPP_TEMPLATE_LANGUAGE: ${{ secrets.WHATSAPP_TEMPLATE_LANGUAGE }}
+        run: |
+          set -euo pipefail
+          put_secret() {
+            local name="$1"
+            local value="$2"
+            printf '%s' "$value" | npx wrangler@4.124.0 secret put "$name" --config wrangler.generated.jsonc >/dev/null
+          }
+          required="${WHATSAPP_ACCESS_TOKEN:-}${WHATSAPP_PHONE_NUMBER_ID:-}${WHATSAPP_OWNER_NUMBER:-}${WHATSAPP_TEMPLATE_NAME:-}"
+          if [ -n "${WHATSAPP_ACCESS_TOKEN:-}" ] && [ -n "${WHATSAPP_PHONE_NUMBER_ID:-}" ] && [ -n "${WHATSAPP_OWNER_NUMBER:-}" ] && [ -n "${WHATSAPP_TEMPLATE_NAME:-}" ]; then
+            put_secret WHATSAPP_ACCESS_TOKEN "$WHATSAPP_ACCESS_TOKEN"
+            put_secret WHATSAPP_PHONE_NUMBER_ID "$WHATSAPP_PHONE_NUMBER_ID"
+            put_secret WHATSAPP_OWNER_NUMBER "$WHATSAPP_OWNER_NUMBER"
+            put_secret WHATSAPP_TEMPLATE_NAME "$WHATSAPP_TEMPLATE_NAME"
+            put_secret WHATSAPP_TEMPLATE_LANGUAGE "${WHATSAPP_TEMPLATE_LANGUAGE:-pt_BR}"
+            echo 'Alertas WhatsApp do Growth OS configurados sem expor credenciais ou telefone.'
+          elif [ -n "$required" ]; then
+            echo '::warning::Configuração WhatsApp incompleta; os eventos ficarão enfileirados e não serão enviados até todos os secrets obrigatórios existirem.'
+          else
+            echo 'WhatsApp ainda não conectado; fila de alertas permanece disponível sem bloquear o deploy.'
+          fi
       - name: Preparar site de produção
         env:
           API_BASE: ${{ steps.api.outputs.deployment-url }}
