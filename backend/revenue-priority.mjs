@@ -16,6 +16,59 @@ export async function prioritizeRevenueQueue(env) {
       AND agent_key IN ('researcher','qualifier','personalizer')
   `).run();
 
+  const duplicatePersonalizers = await env.DB.prepare(`
+    UPDATE crm_agent_jobs
+    SET status='completed', completed_at=CURRENT_TIMESTAMP,
+        output_json='{"skipped":"active_draft_exists","noOutbound":true}'
+    WHERE status='queued'
+      AND agent_key='personalizer'
+      AND EXISTS (
+        SELECT 1 FROM crm_message_drafts d
+        WHERE d.contact_id=json_extract(crm_agent_jobs.input_json,'$.contactId')
+          AND d.purpose='prospecting_review'
+          AND d.status IN ('draft','approved')
+      )
+  `).run();
+
+  const noChannelPersonalizers = await env.DB.prepare(`
+    UPDATE crm_agent_jobs
+    SET status='completed', completed_at=CURRENT_TIMESTAMP,
+        output_json='{"skipped":"no_public_contact_channel","noOutbound":true}'
+    WHERE status='queued'
+      AND agent_key='personalizer'
+      AND EXISTS (
+        SELECT 1 FROM crm_contacts c
+        WHERE c.id=json_extract(crm_agent_jobs.input_json,'$.contactId')
+          AND COALESCE(c.email,'')=''
+          AND COALESCE(c.linkedin_url,'')=''
+      )
+  `).run();
+
+  const redundantQualifiers = await env.DB.prepare(`
+    UPDATE crm_agent_jobs
+    SET status='completed', completed_at=CURRENT_TIMESTAMP,
+        output_json='{"skipped":"no_new_signal_since_score","noOutbound":true}'
+    WHERE status='queued'
+      AND agent_key='qualifier'
+      AND EXISTS (
+        SELECT 1
+        FROM crm_scores s
+        JOIN crm_contacts c ON c.id=s.contact_id
+        WHERE c.account_id=json_extract(crm_agent_jobs.input_json,'$.accountId')
+      )
+      AND NOT EXISTS (
+        SELECT 1
+        FROM crm_signals sig
+        WHERE sig.account_id=json_extract(crm_agent_jobs.input_json,'$.accountId')
+          AND datetime(sig.observed_at) > datetime(COALESCE((
+            SELECT MAX(s2.created_at)
+            FROM crm_scores s2
+            JOIN crm_contacts c2 ON c2.id=s2.contact_id
+            WHERE c2.account_id=json_extract(crm_agent_jobs.input_json,'$.accountId')
+          ),'1970-01-01 00:00:00'))
+      )
+  `).run();
+
   const personalizers = await env.DB.prepare(`
     UPDATE crm_agent_jobs
     SET scheduled_at=datetime('now','-3 days')
@@ -43,6 +96,9 @@ export async function prioritizeRevenueQueue(env) {
   return {
     priority: ['personalizer', 'qualifier', 'researcher'],
     staleRecovered: Number(stale?.meta?.changes || 0),
+    redundantPersonalizersClosed: Number(duplicatePersonalizers?.meta?.changes || 0),
+    noChannelPersonalizersClosed: Number(noChannelPersonalizers?.meta?.changes || 0),
+    redundantQualifiersClosed: Number(redundantQualifiers?.meta?.changes || 0),
     personalizersPrioritized: Number(personalizers?.meta?.changes || 0),
     qualifiersPrioritized: Number(qualifiers?.meta?.changes || 0),
     pending: pending.results || [],
