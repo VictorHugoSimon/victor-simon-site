@@ -19,19 +19,24 @@ test('Runner processa Researcher, Qualifier e Personalizer sem outbound automát
   assert.ok(runner.includes("datetime('now','+30 minutes')"));
 });
 
-test('Worker expõe endpoint robótico e inclui prospecção no ciclo agendado', async () => {
+test('Worker expõe endpoints robóticos e inclui manutenção e prospecção no ciclo agendado', async () => {
   const worker = await text('backend/worker-entry.mjs');
-  assert.ok(worker.includes("handleProspectingAutomationRoute"));
+  assert.ok(worker.includes('handleProspectingAutomationRoute'));
+  assert.ok(worker.includes('handleProspectingMaintenanceRoute'));
   assert.ok(worker.includes("path.startsWith('/api/prospecting-automation')"));
-  assert.ok(worker.includes('await processProspectingAgentJobs(env, 12)'));
+  assert.ok(worker.includes("path.startsWith('/api/prospecting-maintenance')"));
+  assert.ok(worker.includes('await runProspectingMaintenance(env)'));
+  assert.ok(worker.includes('await processProspectingAgentJobs(env, 8)'));
 });
 
-test('GitHub Actions aciona agentes de hora em hora e após deploy de produção', async () => {
+test('GitHub Actions aciona scout e agentes duas vezes por hora e após deploy de produção', async () => {
   const workflow = await text('.github/workflows/prospecting-automation.yml');
-  assert.ok(workflow.includes("cron: '37 * * * *'"));
+  assert.ok(workflow.includes("cron: '7,37 * * * *'"));
   assert.ok(workflow.includes("workflows: ['Deploy PRODUCTION']"));
-  assert.ok(workflow.includes('/api/prospecting-automation/run?limit=20'));
+  assert.ok(workflow.includes('/api/prospecting-maintenance/run'));
+  assert.ok(workflow.includes('/api/prospecting-automation/run?limit=8'));
   assert.ok(workflow.includes('X-Robot-Key'));
+  assert.ok(workflow.includes('--max-time 300'));
 });
 
 test('Carteira inicial tem empresas reais, fila pública e zero envio externo', async () => {
