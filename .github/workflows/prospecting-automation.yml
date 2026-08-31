@@ -2,7 +2,7 @@ name: Agentes de prospecção comercial
 
 on:
   schedule:
-    - cron: '37 * * * *'
+    - cron: '7,37 * * * *'
   workflow_dispatch:
   workflow_run:
     workflows: ['Deploy PRODUCTION']
@@ -17,20 +17,32 @@ concurrency:
 
 jobs:
   run-agents:
-    name: Pesquisar, qualificar e preparar leads
+    name: Descobrir, pesquisar, qualificar e preparar leads
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 8
     environment: production
     steps:
-      - name: Executar fila segura de prospecção
+      - name: Executar Market Scout e enriquecimento público
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           API_URL: https://victor-simon-api.victorhugoteixeirasimon6.workers.dev
         run: |
           set -euo pipefail
           ROBOT_KEY="$(node -e "const c=require('node:crypto');process.stdout.write(c.createHmac('sha256',process.env.CLOUDFLARE_API_TOKEN).update('victor-simon-site:production:robot').digest('hex'))")"
-          curl --fail-with-body --silent --show-error \
-            --request POST "$API_URL/api/prospecting-automation/run?limit=20" \
+          curl --fail-with-body --silent --show-error --max-time 300 \
+            --request POST "$API_URL/api/prospecting-maintenance/run" \
+            --header "X-Robot-Key: $ROBOT_KEY" \
+            --header "Content-Type: application/json"
+
+      - name: Executar fila segura de Researcher Qualifier Personalizer
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          API_URL: https://victor-simon-api.victorhugoteixeirasimon6.workers.dev
+        run: |
+          set -euo pipefail
+          ROBOT_KEY="$(node -e "const c=require('node:crypto');process.stdout.write(c.createHmac('sha256',process.env.CLOUDFLARE_API_TOKEN).update('victor-simon-site:production:robot').digest('hex'))")"
+          curl --fail-with-body --silent --show-error --max-time 300 \
+            --request POST "$API_URL/api/prospecting-automation/run?limit=8" \
             --header "X-Robot-Key: $ROBOT_KEY" \
             --header "Content-Type: application/json"
