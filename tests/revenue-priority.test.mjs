@@ -20,6 +20,15 @@ test('fila recupera jobs presos sem antecipar retries futuros', async () => {
   assert.match(source, /scheduled_at<=CURRENT_TIMESTAMP/);
 });
 
+test('fila encerra requalificação sem sinal novo e personalização redundante', async () => {
+  const source = await read('backend/revenue-priority.mjs');
+  assert.match(source, /active_draft_exists/);
+  assert.match(source, /no_public_contact_channel/);
+  assert.match(source, /no_new_signal_since_score/);
+  assert.match(source, /json_extract\(crm_agent_jobs\.input_json,'\$\.contactId'\)/);
+  assert.match(source, /json_extract\(crm_agent_jobs\.input_json,'\$\.accountId'\)/);
+});
+
 test('workflow prioriza receita antes de executar agentes', async () => {
   const workflow = await read('.github/workflows/prospecting-automation.yml');
   const priority = workflow.indexOf('/api/revenue-priority/run');
